@@ -15,9 +15,11 @@
   const LAND_TIME = 0.22;     // seconds the landing pose is shown
   const WAIT_TO_IDLE = 4;     // seconds of waiting before the cat sits down
   const BIG_FALL = 320;       // landing this far below takeoff counts as a "big fall"
-  const MAX_LIVES = 5;
+  const MAX_LIVES = 7;
   const CP_FALL_MARGIN = 90;  // how far below a checkpoint you must fall to lose a life
   const BLINK_TIME = 2.5;     // seconds the cat blinks after respawning
+  const JET_X = W / 2 + 110;  // Girlfriend Mode jetpack pickup, on the floor next to the spawn
+  const JET_TIME = 3.2;       // seconds the jetpack flight to the handle takes
   const STEP = 1 / 120;       // fixed physics step
 
   const HW = 18;              // player hitbox half-width
@@ -333,6 +335,8 @@
     game.checkpoint = null;
     game.blink = 0;
     game.over = false;
+    game.jetpackTaken = false;
+    game.jet = null;
     particles.length = 0;
     aim.active = false;
     resetPlayer();
@@ -473,6 +477,8 @@
 
     const p = player;
     if (game.wonAt || game.over) return;
+    if (game.jet) { updateJet(dt); return; }
+    if (touchesJetpack()) { startJet(); return; }
 
     if (p.grounded) {
       const pl = p.on;
@@ -513,6 +519,117 @@
     if (cp && p.y > cp.y + CP_FALL_MARGIN) { fellBelowCheckpoint(); return; }
 
     setState(p.vy < 0 ? 'jump' : 'fall');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Jetpack (Girlfriend Mode only): flies the cat straight to the door handle
+  // ---------------------------------------------------------------------------
+  function jetpackAvailable() {
+    return gfMode && !game.jetpackTaken;
+  }
+
+  function touchesJetpack() {
+    const p = player;
+    return jetpackAvailable() && Math.abs(p.x - JET_X) < HW + 14 && p.y > -34 && p.y - PH < 0;
+  }
+
+  function startJet() {
+    const p = player;
+    const h = level.handle;
+    game.jetpackTaken = true;
+    game.jet = { t: 0, x0: p.x, y0: p.y, x1: h.x + h.w * 0.35, y1: h.y - 70 };
+    p.grounded = false;
+    p.on = null;
+    p.vx = 0; p.vy = 0;
+    p.facing = game.jet.x1 >= p.x ? 1 : -1;
+    aim.active = false;
+    $('hint').classList.add('fade');
+    setState('jump');
+    playSfx('jump');
+    showToast('Jetpack! \u2191');
+  }
+
+  function updateJet(dt) {
+    const p = player;
+    const j = game.jet;
+    j.t += dt;
+    const u = clamp(j.t / JET_TIME, 0, 1);
+    const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    p.x = lerp(j.x0, j.x1, e);
+    p.y = lerp(j.y0, j.y1, e);
+    if (Math.random() < 0.6) {
+      particles.push({
+        x: p.x - p.facing * 12 + (Math.random() - 0.5) * 8, y: p.y - 4,
+        vx: (Math.random() - 0.5) * 60, vy: 150 + Math.random() * 200,
+        life: 0.25 + Math.random() * 0.2, t: 0, r: 3 + Math.random() * 3,
+        color: Math.random() < 0.5 ? 'rgba(255,170,60,' : 'rgba(255,230,120,', grav: 0,
+      });
+    }
+    if (u >= 1) {
+      // switch the engine off above the handle and drop onto it
+      game.jet = null;
+      p.takeoffY = p.y;
+      setState('fall');
+    }
+  }
+
+  function drawJetpackShape(cx, cy, flame) {
+    // flames
+    if (flame) {
+      const f = 10 + Math.random() * 8;
+      for (const nx of [cx - 6, cx + 6]) {
+        ctx.fillStyle = '#ffb347';
+        ctx.beginPath(); ctx.moveTo(nx - 4, cy + 12); ctx.lineTo(nx + 4, cy + 12); ctx.lineTo(nx, cy + 12 + f); ctx.fill();
+        ctx.fillStyle = '#fff3a0';
+        ctx.beginPath(); ctx.moveTo(nx - 2, cy + 12); ctx.lineTo(nx + 2, cy + 12); ctx.lineTo(nx, cy + 12 + f * 0.55); ctx.fill();
+      }
+    }
+    // nozzles
+    ctx.fillStyle = '#6b6f7a';
+    ctx.fillRect(cx - 9, cy + 8, 6, 5);
+    ctx.fillRect(cx + 3, cy + 8, 6, 5);
+    // tanks
+    for (const tx of [cx - 11, cx + 1]) {
+      roundRect(tx, cy - 12, 10, 22, 5);
+      ctx.fillStyle = '#e0524f';
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillRect(tx + 2, cy - 8, 2, 13);
+      roundRect(tx + 1, cy - 14, 8, 5, 2);
+      ctx.fillStyle = '#9aa0ab';
+      ctx.fill();
+    }
+    // strap
+    ctx.fillStyle = '#3d3f47';
+    ctx.fillRect(cx - 11, cy - 3, 22, 3);
+  }
+
+  function drawJetpackItem() {
+    if (!jetpackAvailable() || game.jet) return;
+    const bob = Math.sin(game.clock * 3) * 3;
+    const cy = -22 + bob;
+    // glow
+    const g = ctx.createRadialGradient(JET_X, cy, 2, JET_X, cy, 34);
+    g.addColorStop(0, 'rgba(255, 200, 120, 0.55)');
+    g.addColorStop(1, 'rgba(255, 200, 120, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(JET_X, cy, 34, 0, Math.PI * 2); ctx.fill();
+    drawJetpackShape(JET_X, cy, false);
+    // up arrow + label
+    const ay = cy - 30 + Math.sin(game.clock * 5) * 3;
+    ctx.fillStyle = '#ff5d73';
+    ctx.beginPath();
+    ctx.moveTo(JET_X, ay - 10); ctx.lineTo(JET_X + 9, ay); ctx.lineTo(JET_X + 3, ay);
+    ctx.lineTo(JET_X + 3, ay + 8); ctx.lineTo(JET_X - 3, ay + 8); ctx.lineTo(JET_X - 3, ay);
+    ctx.lineTo(JET_X - 9, ay); ctx.closePath(); ctx.fill();
+    ctx.font = '700 10px Fredoka, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(20, 10, 30, 0.6)';
+    ctx.strokeText('JETPACK', JET_X, ay - 18);
+    ctx.fillStyle = '#fff';
+    ctx.fillText('JETPACK', JET_X, ay - 18);
   }
 
   function fellBelowCheckpoint() {
@@ -678,7 +795,13 @@
   function updateCamera(dt) {
     let target = player.y - view.viewH * 0.62;
     if (game.wonAt) target = level.handle.y - view.viewH * 0.5;
-    cam.y += (target - cam.y) * Math.min(1, dt * 5);
+    if (game.jet) {
+      // lock onto the cat while flying so it never leaves the screen
+      target = player.y - view.viewH * 0.5;
+      cam.y += (target - cam.y) * Math.min(1, dt * 30);
+    } else {
+      cam.y += (target - cam.y) * Math.min(1, dt * 5);
+    }
     clampCamera();
   }
 
@@ -896,6 +1019,8 @@
     const sx = p.squash;
     const sy = 1 / p.squash;
 
+    if (game.jet) drawJetpackShape(x - p.facing * 14, y - PH / 2, true);
+
     ctx.save();
     if (game.blink > 0 && Math.floor(game.blink * 10) % 2 === 0) ctx.globalAlpha = 0.25;
     if (air) {
@@ -1023,6 +1148,7 @@
       drawPlatform(p);
     }
     if (game.running) {
+      drawJetpackItem();
       drawPlayer();
       drawParticles();
       drawAimArrow();
