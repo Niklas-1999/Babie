@@ -192,6 +192,90 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Audio
+  // ---------------------------------------------------------------------------
+  const SOUND_DIR = 'assets/sounds/';
+  const MUSIC = ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'];
+  const SFX = {
+    jump: ['spring.mp3', 'spring2.mp3', 'spring3.mp3'],
+    land: ['bloop1.mp3', 'bloop2.mp3', 'bloop3.mp3'],
+  };
+  const MUSIC_VOLUME = 0.35;
+  const SFX_VOLUME = 0.8;
+
+  const audio = {
+    muted: !!store.get('muted', false),
+    ctx: null,
+    gain: null,
+    buffers: { jump: [], land: [] },
+    music: null,
+    track: 0,
+    unlocked: false,
+  };
+
+  function soundUrl(file) { return SOUND_DIR + encodeURIComponent(file); }
+
+  function initAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) {
+      audio.ctx = new AC();
+      audio.gain = audio.ctx.createGain();
+      audio.gain.gain.value = SFX_VOLUME;
+      audio.gain.connect(audio.ctx.destination);
+      for (const [kind, files] of Object.entries(SFX)) {
+        files.forEach((file, i) => {
+          fetch(soundUrl(file))
+            .then((r) => r.arrayBuffer())
+            .then((data) => new Promise((res, rej) => audio.ctx.decodeAudioData(data, res, rej)))
+            .then((buf) => { audio.buffers[kind][i] = buf; })
+            .catch(() => console.warn('Could not load sound', file));
+        });
+      }
+    }
+
+    audio.music = new Audio();
+    audio.music.preload = 'auto';
+    audio.music.volume = MUSIC_VOLUME;
+    audio.music.src = soundUrl(MUSIC[0]);
+    audio.music.addEventListener('ended', () => {
+      audio.track = (audio.track + 1) % MUSIC.length;
+      audio.music.src = soundUrl(MUSIC[audio.track]);
+      playMusic();
+    });
+  }
+
+  function playMusic() {
+    if (audio.muted || !audio.unlocked || document.hidden) return;
+    const p = audio.music.play();
+    if (p && p.catch) p.catch(() => { /* blocked until next gesture */ });
+  }
+
+  // Browsers only allow audio after a user gesture.
+  function unlockAudio() {
+    audio.unlocked = true;
+    if (audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume();
+    if (audio.music.paused) playMusic();
+  }
+
+  function playSfx(kind) {
+    if (audio.muted || !audio.ctx) return;
+    const loaded = audio.buffers[kind].filter(Boolean);
+    if (!loaded.length) return;
+    const src = audio.ctx.createBufferSource();
+    src.buffer = loaded[Math.floor(Math.random() * loaded.length)];
+    src.connect(audio.gain);
+    src.start();
+  }
+
+  function setMuted(m) {
+    audio.muted = m;
+    store.set('muted', m);
+    if (m) audio.music.pause(); else playMusic();
+    $('btn-sound').classList.toggle('muted', m);
+    $('btn-sound').setAttribute('aria-label', m ? 'Unmute' : 'Mute');
+  }
+
+  // ---------------------------------------------------------------------------
   // Game state
   // ---------------------------------------------------------------------------
   const game = {
@@ -350,6 +434,7 @@
     player.squash = 0.78;
     game.jumps++;
     setState('jump');
+    playSfx('jump');
     spawnDust(player.x, player.y, 6, 0.6);
     if (game.jumps >= 2) $('hint').classList.add('fade');
   }
@@ -421,6 +506,7 @@
     p.on = pl;
     p.squash = 1 + clamp(impact / 2600, 0.08, 0.3);
     setState('land');
+    playSfx('land');
     spawnDust(p.x, p.y, 8 + Math.round(impact / 200), 1);
     if (pl.y - p.takeoffY > BIG_FALL) game.falls++;
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) { /* ignore */ } }
@@ -1002,7 +1088,12 @@
   $('opt-invert').addEventListener('change', (e) => setDirectAim(e.target.checked));
   $('opt-invert-2').addEventListener('change', (e) => setDirectAim(e.target.checked));
 
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { pause(); audio.music.pause(); } else playMusic();
+  });
+  window.addEventListener('pointerdown', unlockAudio, true);
+  window.addEventListener('keydown', unlockAudio, true);
+  $('btn-sound').addEventListener('click', () => setMuted(!audio.muted));
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' || e.key === 'p') {
       if (game.paused) resume(); else pause();
@@ -1016,6 +1107,8 @@
   // Boot
   // ---------------------------------------------------------------------------
   setDirectAim(directAim);
+  initAudio();
+  setMuted(audio.muted);
   loadSprites().then(() => {
     $('loading').classList.add('hidden');
     refreshMenu();

@@ -193,6 +193,9 @@ h2 { font-size: 32px; margin-bottom: 8px; }
   color: var(--text); fill: currentColor; pointer-events: auto; cursor: pointer; padding: 0;
 }
 .icon-btn:active { transform: scale(0.94); }
+#btn-sound .cross { display: none; }
+#btn-sound.muted .cross { display: inline; }
+#btn-sound.muted .wave { display: none; }
 .hud-sub { margin-top: 6px; font-size: 13px; color: var(--muted); padding-left: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
 
 .hint {
