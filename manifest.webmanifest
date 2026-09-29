@@ -1,0 +1,13 @@
+{
+  "name": "Open the Door",
+  "short_name": "Open the Door",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#1b1526",
+  "theme_color": "#1b1526",
+  "icons": [
+    { "src": "assets/Mallow/mallow_sitting.png", "sizes": "212x202", "type": "image/png" }
+  ]
+}
