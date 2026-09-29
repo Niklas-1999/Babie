@@ -309,6 +309,7 @@
   const particles = [];
   let accumulator = 0;
   let directAim = !!store.get('directAim', false);
+  let gfMode = !!store.get('gfMode', false); // infinite lives
 
   function setState(s) {
     if (player.state !== s) { player.state = s; player.stateTime = 0; }
@@ -515,7 +516,7 @@
   }
 
   function fellBelowCheckpoint() {
-    game.lives--;
+    if (!gfMode) game.lives--;
     updateHud(true);
     const hearts = $('hud-hearts');
     hearts.classList.remove('hurt');
@@ -1042,10 +1043,12 @@
 
   function updateHud(force) {
     if (force) for (const k in hudCache) delete hudCache[k];
-    if (hudCache.lives !== game.lives) {
-      hudCache.lives = game.lives;
+    const livesKey = gfMode ? 'inf' : game.lives;
+    if (hudCache.lives !== livesKey) {
+      hudCache.lives = livesKey;
       let html = '';
-      for (let i = 0; i < MAX_LIVES; i++) html += '<span class="heart' + (i < game.lives ? '' : ' lost') + '">' + HEART_SVG + '</span>';
+      if (gfMode) html = '<span class="heart">' + HEART_SVG + '</span><span class="infinite">&infin;</span>';
+      else for (let i = 0; i < MAX_LIVES; i++) html += '<span class="heart' + (i < game.lives ? '' : ' lost') + '">' + HEART_SVG + '</span>';
       $('hud-hearts').innerHTML = html;
     }
     setText('hud-time', formatTime(game.time));
@@ -1172,6 +1175,7 @@
   $('btn-over-menu').addEventListener('click', toMenu);
   $('opt-invert').addEventListener('change', (e) => setDirectAim(e.target.checked));
   $('opt-invert-2').addEventListener('change', (e) => setDirectAim(e.target.checked));
+  $('opt-gf').addEventListener('change', (e) => { gfMode = e.target.checked; store.set('gfMode', gfMode); });
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { pause(); audio.music.pause(); } else playMusic();
@@ -1192,6 +1196,7 @@
   // Boot
   // ---------------------------------------------------------------------------
   setDirectAim(directAim);
+  $('opt-gf').checked = gfMode;
   initAudio();
   setMuted(audio.muted);
   loadSprites().then(() => {

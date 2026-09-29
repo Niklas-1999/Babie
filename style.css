@@ -159,6 +159,9 @@ h2 { font-size: 32px; margin-bottom: 8px; }
 }
 .toggle input:checked + .track { background: var(--accent); }
 .toggle input:checked + .track .knob { transform: translateX(16px); }
+.toggle.gf input:checked + .track { background: #ff5d73; }
+.toggle.gf input:checked ~ span:last-child { color: #ffb3bf; }
+.hearts .infinite { margin-left: 4px; font-weight: 700; font-size: 16px; color: #ffb3bf; }
 
 /* ---------- HUD ---------- */
 #hud {
