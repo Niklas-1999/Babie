@@ -34,8 +34,10 @@
       </button>
     </div>
     <div class="hud-sub">
+      <div class="hearts" id="hud-hearts" aria-label="Lives"></div>
       <span id="hud-jumps">0 jumps</span>
     </div>
+    <div id="toast" class="toast"></div>
     <div id="hint" class="hint">
       <div class="hint-hand"></div>
       <span>Drag back &amp; release to jump</span>
@@ -110,6 +112,24 @@
       <div class="actions">
         <button class="btn primary" id="btn-again">Play again</button>
         <button class="btn ghost" id="btn-win-menu">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game over -->
+  <section id="over" class="screen hidden">
+    <div class="panel">
+      <p class="eyebrow">Out of lives</p>
+      <h2>Game over</h2>
+      <p class="sub">The door stays shut… for now.</p>
+      <div class="stats">
+        <div><span class="stat-val" id="over-progress">0%</span><span class="stat-label">Reached</span></div>
+        <div><span class="stat-val" id="over-time">0:00</span><span class="stat-label">Time</span></div>
+        <div><span class="stat-val" id="over-jumps">0</span><span class="stat-label">Jumps</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btn-over-again">Try again</button>
+        <button class="btn ghost" id="btn-over-menu">Menu</button>
       </div>
     </div>
   </section>

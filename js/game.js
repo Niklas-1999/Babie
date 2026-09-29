@@ -15,6 +15,9 @@
   const LAND_TIME = 0.22;     // seconds the landing pose is shown
   const WAIT_TO_IDLE = 4;     // seconds of waiting before the cat sits down
   const BIG_FALL = 320;       // landing this far below takeoff counts as a "big fall"
+  const MAX_LIVES = 5;
+  const CP_FALL_MARGIN = 90;  // how far below a checkpoint you must fall to lose a life
+  const BLINK_TIME = 2.5;     // seconds the cat blinks after respawning
   const STEP = 1 / 120;       // fixed physics step
 
   const HW = 18;              // player hitbox half-width
@@ -288,6 +291,10 @@
     falls: 0,
     wonAt: 0,
     handleAngle: 0,
+    lives: MAX_LIVES,
+    checkpoint: null,  // the shelf platform the cat respawns on
+    blink: 0,
+    over: false,
   };
 
   const player = {
@@ -321,6 +328,10 @@
     game.paused = false;
     game.wonAt = 0;
     game.handleAngle = 0;
+    game.lives = MAX_LIVES;
+    game.checkpoint = null;
+    game.blink = 0;
+    game.over = false;
     particles.length = 0;
     aim.active = false;
     resetPlayer();
@@ -329,6 +340,9 @@
       game.time = fromSave.time || 0;
       game.jumps = fromSave.jumps || 0;
       game.falls = fromSave.falls || 0;
+      game.lives = fromSave.lives || MAX_LIVES;
+      const cp = level.plats[fromSave.checkpoint];
+      if (cp && cp.kind === 'shelf') game.checkpoint = cp;
       const pl = level.plats[fromSave.plat];
       if (pl && pl.kind !== 'handle') {
         player.on = pl;
@@ -356,6 +370,7 @@
     store.set('save', {
       cat: game.catKey, plat: idx, rel: player.x - player.on.x,
       time: game.time, jumps: game.jumps, falls: game.falls,
+      lives: game.lives, checkpoint: game.checkpoint ? level.plats.indexOf(game.checkpoint) : -1,
       progress: progress(),
     });
   }
@@ -368,7 +383,7 @@
   // Input (slingshot)
   // ---------------------------------------------------------------------------
   function canAim() {
-    return game.running && !game.paused && !game.wonAt && player.grounded;
+    return game.running && !game.paused && !game.wonAt && !game.over && player.grounded;
   }
 
   function maxDrag() {
@@ -456,7 +471,7 @@
     updatePlatforms();
 
     const p = player;
-    if (game.wonAt) return;
+    if (game.wonAt || game.over) return;
 
     if (p.grounded) {
       const pl = p.on;
@@ -493,7 +508,59 @@
       if (hit) { land(hit); return; }
     }
 
+    const cp = game.checkpoint;
+    if (cp && p.y > cp.y + CP_FALL_MARGIN) { fellBelowCheckpoint(); return; }
+
     setState(p.vy < 0 ? 'jump' : 'fall');
+  }
+
+  function fellBelowCheckpoint() {
+    game.lives--;
+    updateHud(true);
+    const hearts = $('hud-hearts');
+    hearts.classList.remove('hurt');
+    void hearts.offsetWidth; // restart the shake animation
+    hearts.classList.add('hurt');
+    if (navigator.vibrate) { try { navigator.vibrate([40, 40, 40]); } catch (e) { /* ignore */ } }
+    if (game.lives <= 0) { gameOver(); return; }
+    respawnAtCheckpoint();
+    saveProgress();
+  }
+
+  function respawnAtCheckpoint() {
+    const p = player;
+    const cp = game.checkpoint;
+    p.x = clamp(cp.x + cp.w / 2, HW, W - HW);
+    p.y = cp.y;
+    p.vx = 0; p.vy = 0;
+    p.grounded = true;
+    p.on = cp;
+    p.squash = 1;
+    aim.active = false;
+    game.blink = BLINK_TIME;
+    setState('waiting');
+    spawnDust(p.x, p.y, 10, 0.8);
+  }
+
+  function gameOver() {
+    game.over = true;
+    aim.active = false;
+    store.del('save');
+    setTimeout(() => {
+      $('over-progress').textContent = Math.round(progress() * 100) + '%';
+      $('over-time').textContent = formatTime(game.time, false);
+      $('over-jumps').textContent = game.jumps;
+      $('hud').classList.add('hidden');
+      showScreen('over');
+    }, 700);
+  }
+
+  function showToast(text) {
+    const t = $('toast');
+    t.textContent = text;
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
   }
 
   function land(pl) {
@@ -510,6 +577,10 @@
     spawnDust(p.x, p.y, 8 + Math.round(impact / 200), 1);
     if (pl.y - p.takeoffY > BIG_FALL) game.falls++;
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) { /* ignore */ } }
+    if (pl.kind === 'shelf' && (!game.checkpoint || pl.y < game.checkpoint.y)) {
+      game.checkpoint = pl;
+      showToast('Checkpoint ' + pl.label.replace(/ /g, ''));
+    }
     if (pl.kind === 'handle') win();
     else saveProgress();
   }
@@ -517,6 +588,7 @@
   function updatePlayerAnim(dt) {
     const p = player;
     p.stateTime += dt;
+    if (game.blink > 0) game.blink = Math.max(0, game.blink - dt);
     p.squash += (1 - p.squash) * Math.min(1, dt * 12);
     if (p.state === 'land' && p.stateTime >= LAND_TIME) setState('waiting');
     if (p.state === 'waiting' && p.stateTime >= WAIT_TO_IDLE) setState('idle');
@@ -711,7 +783,8 @@
       normal: ['#fff3dd', '#e8cfa6'],
       moving: ['#bfe3ff', '#7fb5e6'],
       shelf: ['#e3a86e', '#b87a47'],
-    }[p.kind];
+      checkpoint: ['#b6f0c8', '#5fbf85'],
+    }[p === game.checkpoint ? 'checkpoint' : p.kind];
 
     // shadow
     roundRect(p.x + 3, p.y + 5, p.w, p.h, 6);
@@ -739,7 +812,8 @@
       ctx.font = '600 11px Fredoka, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(p.label, p.x + p.w / 2, p.y + p.h * 0.65);
+      ctx.fillText(p === game.checkpoint ? 'CHECKPOINT ' + p.label.replace(/ /g, '') : p.label,
+        p.x + p.w / 2, p.y + p.h * 0.65);
     }
   }
 
@@ -822,6 +896,7 @@
     const sy = 1 / p.squash;
 
     ctx.save();
+    if (game.blink > 0 && Math.floor(game.blink * 10) % 2 === 0) ctx.globalAlpha = 0.25;
     if (air) {
       ctx.translate(x, y - PH / 2);
       ctx.scale(sx, sy);
@@ -963,8 +1038,16 @@
     if (hudCache[id] !== text) { hudCache[id] = text; $(id).textContent = text; }
   }
 
+  const HEART_SVG = '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.2 0 3.6 1.2 4.3 2.4h2c.7-1.2 2.1-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg>';
+
   function updateHud(force) {
     if (force) for (const k in hudCache) delete hudCache[k];
+    if (hudCache.lives !== game.lives) {
+      hudCache.lives = game.lives;
+      let html = '';
+      for (let i = 0; i < MAX_LIVES; i++) html += '<span class="heart' + (i < game.lives ? '' : ' lost') + '">' + HEART_SVG + '</span>';
+      $('hud-hearts').innerHTML = html;
+    }
     setText('hud-time', formatTime(game.time));
     const pct = Math.round(progress() * 100);
     setText('hud-progress-text', pct + '%');
@@ -1009,13 +1092,13 @@
   // ---------------------------------------------------------------------------
   // Screens & UI wiring
   // ---------------------------------------------------------------------------
-  const screens = ['menu', 'pause', 'win'];
+  const screens = ['menu', 'pause', 'win', 'over'];
   function showScreen(name) {
     for (const s of screens) $(s).classList.toggle('hidden', s !== name);
   }
 
   function pause() {
-    if (!game.running || game.paused || game.wonAt) return;
+    if (!game.running || game.paused || game.wonAt || game.over) return;
     game.paused = true;
     aim.active = false;
     if (player.grounded && player.state === 'aim') setState('waiting');
@@ -1085,6 +1168,8 @@
   $('btn-menu').addEventListener('click', toMenu);
   $('btn-again').addEventListener('click', () => startGame(game.catKey, null));
   $('btn-win-menu').addEventListener('click', toMenu);
+  $('btn-over-again').addEventListener('click', () => startGame(game.catKey, null));
+  $('btn-over-menu').addEventListener('click', toMenu);
   $('opt-invert').addEventListener('change', (e) => setDirectAim(e.target.checked));
   $('opt-invert-2').addEventListener('change', (e) => setDirectAim(e.target.checked));
 
