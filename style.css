@@ -345,3 +345,11 @@ h2 { font-size: 32px; margin-bottom: 8px; }
   .best { margin-top: 2px; }
   .btn { padding: 11px 16px; }
 }
+
+/* ---------- Fullscreen ---------- */
+.fs-btn .fs-exit, .fs-btn .fs-label-exit { display: none; }
+.fs-btn.active .fs-exit, .fs-btn.active .fs-label-exit { display: inline; }
+.fs-btn.active .fs-enter, .fs-btn.active .fs-label-enter { display: none; }
+.btn.small { padding: 9px 16px; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+.tip { margin: 0; font-size: 13px; color: var(--muted); max-width: 300px; }
+.level-icon.street { background: linear-gradient(135deg, #8fd0ff, #3c8fd6); }

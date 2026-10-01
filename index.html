@@ -29,6 +29,7 @@
       <button class="icon-btn" id="btn-sound" aria-label="Mute">
         <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
+      <button class="icon-btn fs-btn" aria-label="Fullscreen"><svg class="fs-enter" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
       <button class="icon-btn" id="btn-pause" aria-label="Pause">
         <svg viewBox="0 0 24 24" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
       </button>
@@ -70,6 +71,8 @@
       </div>
 
       <div class="menu-foot">
+        <button class="btn ghost small fs-btn" aria-label="Fullscreen"><svg class="fs-enter" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg><span class="fs-label-enter">Fullscreen</span><span class="fs-label-exit">Exit fullscreen</span></button>
+        <p class="tip hidden" id="ios-tip">Tip: for fullscreen on iPhone, tap Share &rarr; <b>Add to Home Screen</b> and play from there.</p>
         <label class="toggle">
           <input type="checkbox" id="opt-invert">
           <span class="track"><span class="knob"></span></span>
@@ -104,6 +107,14 @@
             <div class="level-name"><span class="level-num">2</span> Kitchen Raid</div>
             <div class="level-desc">Trampolines, crumbly crackers &amp; cat food</div>
             <div class="level-meta"><span class="orient landscape">Landscape</span><span class="level-best" id="best-2"></span></div>
+          </div>
+        </button>
+        <button class="level-card" data-level="3">
+          <div class="level-icon street">&#128663;</div>
+          <div class="level-info">
+            <div class="level-name"><span class="level-num">3</span> Street Dash</div>
+            <div class="level-desc">Jump over the traffic and reach the forest</div>
+            <div class="level-meta"><span class="orient landscape">Landscape</span><span class="level-best" id="best-3"></span></div>
           </div>
         </button>
       </div>

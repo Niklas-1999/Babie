@@ -22,6 +22,7 @@
   const BREAK_DELAY = 1.1;    // seconds a cracker platform holds after being landed on
   const BREAK_RESPAWN = 3.5;  // seconds until a broken platform comes back
   const TRAMP_SKIP = 3;       // trampolines launch you this many platforms ahead
+  const HIT_W = 74;           // on-screen width of the knocked-over sprite
   const STEP = 1 / 120;       // fixed physics step
 
   const HW = 18;              // player hitbox half-width
@@ -33,7 +34,7 @@
     mallow:  { name: 'Mallow',  dir: 'assets/Mallow/',  prefix: 'mallow_' },
     mischko: { name: 'Mischko', dir: 'assets/Mischko/', prefix: 'mischko_' },
   };
-  const POSE_FILES = ['idle', 'jump', 'falling', 'landing', 'sitting'];
+  const POSE_FILES = ['idle', 'jump', 'falling', 'landing', 'sitting', 'hit'];
   // game state -> sprite file
   const POSE_FOR_STATE = {
     waiting: 'idle',      // standing side view
@@ -43,6 +44,7 @@
     jump: 'jump',
     fall: 'falling',
     won: 'sitting',
+    hit: 'hit',           // knocked over by a car
   };
 
   // ---------------------------------------------------------------------------
@@ -242,6 +244,67 @@
     return level;
   }
 
+  // Level 3 (landscape): a sunny street. Cars drive by; jump over them to reach the forest.
+  function buildStreetLevel() {
+    const rnd = mulberry32(20261002);
+    const R = (a, b) => a + (b - a) * rnd();
+    const width = 8000;
+    const forestX = width - 520;
+    const plats = [{ kind: 'floor', x: -600, y: 0, w: width + 1200, h: 800 }];
+
+    // Things to stand on. Anything taller than a car is a safe spot.
+    const PROPS = [
+      { type: 'hydrant', w: 26, h: 38 }, { type: 'trash', w: 44, h: 64 },
+      { type: 'mailbox', w: 42, h: 84 }, { type: 'crates', w: 60, h: 56 },
+      { type: 'crates2', w: 60, h: 112 }, { type: 'bench', w: 110, h: 42 },
+      { type: 'busstop', w: 170, h: 150 }, { type: 'wall', w: 150, h: 74 },
+      { type: 'umbrella', w: 100, h: 128 }, { type: 'umbrella', w: 100, h: 128 },
+      { type: 'kiosk', w: 180, h: 168 }, { type: 'shop', w: 270, h: 200 }, { type: 'shop', w: 270, h: 200 },
+    ];
+    const SHOP_NAMES = ['CAFÉ', 'BAKERY', 'PET SHOP', 'FLOWERS', 'BOOKS', 'DELI', 'ICE CREAM'];
+    let x = 460;
+    while (x < forestX - 360) {
+      const t = PROPS[Math.floor(rnd() * PROPS.length)];
+      const p = { kind: 'prop', type: t.type, x, y: -t.h, w: t.w, h: t.h };
+      if (t.type === 'shop') {
+        // flat roof up top, plus a striped awning halfway up to hop onto first
+        p.name = SHOP_NAMES[Math.floor(rnd() * SHOP_NAMES.length)];
+        p.hue = Math.floor(rnd() * 360);
+        plats.push(p);
+        plats.push({ kind: 'prop', type: 'awning', x: x - 14, y: -112, w: 150, h: 12, hue: p.hue });
+      } else {
+        if (t.type === 'umbrella' || t.type === 'kiosk') p.hue = Math.floor(rnd() * 360);
+        plats.push(p);
+      }
+      x += t.w + R(170, 420);
+    }
+
+    const goal = { kind: 'forest', x: forestX, y: -120, w: width - forestX, h: 120, jetX: forestX + 90, jetY: -170 };
+
+    // Background: houses (parallax), clouds and the forest at the end
+    const houses = [];
+    const HOUSE_COLORS = ['#f6c8a8', '#bfe0d6', '#f3e1a6', '#d8c8f0', '#f4b6b6', '#c9dff2'];
+    for (let hx = -300; hx < width * 0.5 + 1800;) {
+      const w = R(170, 280);
+      const r = rnd();
+      houses.push({
+        x: hx, w, h: R(160, 300), color: HOUSE_COLORS[Math.floor(rnd() * HOUSE_COLORS.length)],
+        style: r < 0.35 ? 'house' : r < 0.7 ? 'shop' : 'tower',
+        name: SHOP_NAMES[Math.floor(rnd() * SHOP_NAMES.length)], hue: Math.floor(rnd() * 360),
+      });
+      hx += w + R(16, 70);
+    }
+    const clouds = [];
+    for (let k = 0; k < 40; k++) clouds.push({ x: k * R(220, 320), y: R(-470, -330), s: R(0.7, 1.3) });
+    const trees = [];
+    for (let tx = forestX - 30; tx < width + 500; tx += R(45, 85)) trees.push({ x: tx, h: R(260, 420), r: R(50, 80), shade: rnd() });
+
+    return {
+      id: 3, theme: 'street', width, plats, goal, topY: -480, spawnX: 140, jetX: 290,
+      landscape: true, viewW: 640, viewH: 400, cars: true, houses, clouds, trees,
+    };
+  }
+
   function makeMoving(p, R, width) {
     p.kind = 'moving';
     p.amp = R(30, 60);
@@ -274,8 +337,12 @@
   }
 
   const LEVELS = {
-    1: { name: 'Open the Door', build: buildDoorLevel, winTitle: 'Door opened!', loseText: 'The door stays shut… for now.' },
-    2: { name: 'Kitchen Raid', build: buildKitchenLevel, winTitle: 'Dinner time!', loseText: 'The can stays closed… for now.' },
+    1: { name: 'Open the Door', build: buildDoorLevel, winTitle: 'Door opened!', loseText: 'The door stays shut… for now.',
+      music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'] },
+    2: { name: 'Kitchen Raid', build: buildKitchenLevel, winTitle: 'Dinner time!', loseText: 'The can stays closed… for now.',
+      music: ['Bouncy Banjo Run.mp3', 'Bouncy Banjo Run2.mp3'] },
+    3: { name: 'Street Dash', build: buildStreetLevel, winTitle: 'Into the forest!', loseText: 'Too much traffic… try again.',
+      music: ['Jaunty Guitar Motif.mp3', 'Jaunty Guitar Motif2.mp3'], intro: 'Jump over the cars!' },
   };
 
   let level = buildDoorLevel();
@@ -319,21 +386,62 @@
     if (wrongOrientation) aim.active = false;
   }
 
+  // ---------------------------------------------------------------------------
+  // Fullscreen (hides the browser bars; iPhone Safari doesn't support it)
+  // ---------------------------------------------------------------------------
+  const docEl = document.documentElement;
+  const fsSupported = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  let autoFullscreen = false;   // true when the game (not the player) entered fullscreen
+
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  function enterFullscreen() {
+    const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+    if (!req) return Promise.reject();
+    const r = req.call(docEl);
+    return r && r.then ? r : Promise.resolve();
+  }
+
+  function exitFullscreen() {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) { const r = exit.call(document); if (r && r.catch) r.catch(() => {}); }
+  }
+
+  function toggleFullscreen() {
+    if (isFullscreen()) { exitFullscreen(); return; }
+    autoFullscreen = false;
+    enterFullscreen().then(() => {
+      if (game.running) lockOrientation(level.landscape ? 'landscape' : 'portrait');
+    }).catch(() => {});
+  }
+
+  function updateFullscreenButtons() {
+    const on = isFullscreen();
+    document.querySelectorAll('.fs-btn').forEach((b) => {
+      b.classList.toggle('hidden', !fsSupported);
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Fullscreen');
+    });
+  }
+
   // Android can lock orientation (only in fullscreen); iOS just gets the rotate prompt.
   function lockOrientation(want) {
     if (!isTouch) return;
     const so = screen.orientation;
-    const el = document.documentElement;
-    if (want === 'landscape') {
-      if (!document.fullscreenElement && el.requestFullscreen) {
-        el.requestFullscreen().then(() => so && so.lock && so.lock('landscape')).catch(() => {});
-      } else if (so && so.lock) {
-        so.lock('landscape').catch(() => {});
-      }
-    } else if (so && so.unlock && document.fullscreenElement) {
-      try { so.unlock(); } catch (e) { /* ignore */ }
-      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    const lock = () => { if (so && so.lock) so.lock(want).catch(() => {}); };
+    if (isFullscreen()) { lock(); return; }
+    if (want === 'landscape' && fsSupported) {
+      enterFullscreen().then(() => { autoFullscreen = true; lock(); }).catch(() => {});
     }
+  }
+
+  function releaseOrientation() {
+    const so = screen.orientation;
+    if (autoFullscreen && isFullscreen()) exitFullscreen();
+    else if (so && so.unlock && isFullscreen()) { try { so.unlock(); } catch (e) { /* ignore */ } }
+    autoFullscreen = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -362,6 +470,8 @@
     for (const key of Object.keys(CATS)) {
       const ref = sprites[key].idle;
       sprites[key].scale = ref ? SPRITE_H / ref.height : 0.25;
+      const hit = sprites[key].hit;
+      sprites[key].hitScale = hit ? HIT_W / hit.width : sprites[key].scale;
     }
   }
 
@@ -369,10 +479,11 @@
   // Audio
   // ---------------------------------------------------------------------------
   const SOUND_DIR = 'assets/sounds/';
-  const MUSIC = ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'];
   const SFX = {
     jump: ['spring.mp3', 'spring2.mp3', 'spring3.mp3'],
     land: ['bloop1.mp3', 'bloop2.mp3', 'bloop3.mp3'],
+    crash: ['car crash.mp3'],
+    drive: ['car_driving.mp3', 'car_driving2.mp3'],
   };
   const MUSIC_VOLUME = 0.35;
   const SFX_VOLUME = 0.8;
@@ -381,8 +492,9 @@
     muted: !!store.get('muted', false),
     ctx: null,
     gain: null,
-    buffers: { jump: [], land: [] },
+    buffers: { jump: [], land: [], crash: [], drive: [] },
     music: null,
+    playlist: null,   // tracks of the current level, played one after the other
     track: 0,
     unlocked: false,
   };
@@ -410,12 +522,20 @@
     audio.music = new Audio();
     audio.music.preload = 'auto';
     audio.music.volume = MUSIC_VOLUME;
-    audio.music.src = soundUrl(MUSIC[0]);
+    setPlaylist(LEVELS[1].music);
     audio.music.addEventListener('ended', () => {
-      audio.track = (audio.track + 1) % MUSIC.length;
-      audio.music.src = soundUrl(MUSIC[audio.track]);
+      audio.track = (audio.track + 1) % audio.playlist.length;
+      audio.music.src = soundUrl(audio.playlist[audio.track]);
       playMusic();
     });
+  }
+
+  function setPlaylist(list) {
+    if (audio.playlist === list) return;
+    audio.playlist = list;
+    audio.track = 0;
+    audio.music.src = soundUrl(list[0]);
+    playMusic();
   }
 
   function playMusic() {
@@ -441,9 +561,60 @@
     src.start();
   }
 
+  // Engine sound that follows one car: louder as it gets close, panned to its side.
+  function startCarSound(car) {
+    if (audio.muted || !audio.ctx) return;
+    const bufs = audio.buffers.drive.filter(Boolean);
+    if (!bufs.length) return;
+    const ac = audio.ctx;
+    const src = ac.createBufferSource();
+    src.buffer = bufs[Math.floor(Math.random() * bufs.length)];
+    src.loop = true;
+    const gain = ac.createGain();
+    gain.gain.value = 0;
+    const pan = ac.createStereoPanner ? ac.createStereoPanner() : null;
+    src.connect(gain);
+    if (pan) { gain.connect(pan); pan.connect(audio.gain); } else gain.connect(audio.gain);
+    src.start();
+    car.sound = { src, gain, pan };
+    updateCarSound(car);
+  }
+
+  function updateCarSound(car) {
+    const snd = car.sound;
+    if (!snd) return;
+    const d = car.x + car.w / 2 - player.x;
+    const near = Math.pow(clamp(1 - Math.abs(d) / 1800, 0, 1), 1.4);
+    const now = audio.ctx.currentTime;
+    snd.gain.gain.setTargetAtTime(lerp(0.12, 0.9, near), now, 0.08);
+    if (snd.pan) snd.pan.pan.setTargetAtTime(clamp(d / 700, -1, 1), now, 0.08);
+  }
+
+  function stopCarSound(car) {
+    const snd = car.sound;
+    if (!snd) return;
+    car.sound = null;
+    const now = audio.ctx.currentTime;
+    snd.gain.gain.setTargetAtTime(0, now, 0.15);
+    try { snd.src.stop(now + 0.8); } catch (e) { /* ignore */ }
+  }
+
+  function stopAllCarSounds() {
+    for (const c of game.cars) stopCarSound(c);
+  }
+
+  // Freeze sound effects (engines) while the game is paused or waiting for rotation.
+  function syncAudioPause() {
+    if (!audio.ctx || !audio.unlocked) return;
+    const hold = game.running && (game.paused || wrongOrientation);
+    if (hold && audio.ctx.state === 'running') audio.ctx.suspend();
+    else if (!hold && audio.ctx.state === 'suspended') audio.ctx.resume();
+  }
+
   function setMuted(m) {
     audio.muted = m;
     store.set('muted', m);
+    if (m) stopAllCarSounds();
     if (m) audio.music.pause(); else playMusic();
     $('btn-sound').classList.toggle('muted', m);
     $('btn-sound').setAttribute('aria-label', m ? 'Unmute' : 'Mute');
@@ -466,6 +637,8 @@
     checkpoint: null,  // the shelf platform the cat respawns on
     blink: 0,
     over: false,
+    cars: [],
+    carTimer: 0,
   };
 
   const player = {
@@ -474,6 +647,7 @@
     state: 'waiting', stateTime: 0,
     facing: 1, squash: 1,
     takeoffY: 0,
+    spin: 0, spinRate: 0,   // rotation while flying after a car hit
   };
 
   const aim = { active: false, id: null, sx: 0, sy: 0, cx: 0, cy: 0, power: 0, angle: 0 };
@@ -508,6 +682,10 @@
     game.over = false;
     game.jetpackTaken = false;
     game.jet = null;
+    stopAllCarSounds();
+    game.cars = [];
+    game.carTimer = 1;
+    player.spin = 0;
     particles.length = 0;
     aim.active = false;
     resetPlayer();
@@ -538,6 +716,8 @@
     clampCamera();
     showScreen(null);
     checkOrientation();
+    setPlaylist(LEVELS[levelId].music);
+    if (LEVELS[levelId].intro && !fromSave) showToast(LEVELS[levelId].intro);
     $('hud').classList.remove('hidden');
     $('hint').classList.toggle('hidden', game.jumps >= 2);
     $('hint').classList.remove('fade');
@@ -681,11 +861,17 @@
   function step(dt) {
     game.clock += dt;
     updatePlatforms(dt);
+    updateCars(dt);
 
     const p = player;
     if (game.wonAt || game.over) return;
     if (game.jet) { updateJet(dt); return; }
     if (touchesJetpack()) { startJet(); return; }
+    if (level.cars && game.blink <= 0 && p.state !== 'hit') {
+      const car = carTouching();
+      if (car) hitByCar(car);
+    }
+    if (p.state === 'hit') p.spin += p.spinRate * dt;
 
     if (p.grounded) {
       const pl = p.on;
@@ -728,7 +914,90 @@
     const cp = game.checkpoint;
     if (cp && p.y > cp.y + CP_FALL_MARGIN) { fellBelowCheckpoint(); return; }
 
-    setState(p.vy < 0 ? 'jump' : 'fall');
+    if (p.state !== 'hit') setState(p.vy < 0 ? 'jump' : 'fall');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cars (level 3)
+  // ---------------------------------------------------------------------------
+  const CAR_TYPES = [
+    { type: 'car', w: 186, h: 66 },
+    { type: 'car', w: 172, h: 62 },
+    { type: 'van', w: 220, h: 82 },
+    { type: 'mini', w: 140, h: 56 },
+  ];
+  const CAR_COLORS = ['#ff6b6b', '#4dabf7', '#ffd43b', '#69db7c', '#b197fc', '#ff922b', '#f8f9fa'];
+
+  function updateCars(dt) {
+    if (!level.cars) return;
+    game.carTimer -= dt;
+    if (game.carTimer <= 0 && !game.wonAt && !game.over) {
+      spawnCar();
+      // traffic gets busier the further you get
+      game.carTimer = lerp(4.0, 2.3, progress()) * (0.75 + Math.random() * 0.5);
+    }
+    for (let i = game.cars.length - 1; i >= 0; i--) {
+      const c = game.cars[i];
+      c.x += c.vx * dt;
+      c.wheel += c.vx * dt / 11;
+      updateCarSound(c);
+      if ((c.vx < 0 && c.x + c.w < cam.x - 700) || (c.vx > 0 && c.x > cam.x + view.viewW + 700)) {
+        stopCarSound(c);
+        game.cars.splice(i, 1);
+      }
+    }
+  }
+
+  function spawnCar() {
+    const t = CAR_TYPES[Math.floor(Math.random() * CAR_TYPES.length)];
+    const dir = Math.random() < 0.75 ? -1 : 1;   // mostly oncoming, sometimes from behind
+    const speed = lerp(430, 640, progress()) * (0.9 + Math.random() * 0.25);
+    const lead = speed * 2;   // spawn ~2 s before it drives into view, so the engine sound warns first
+    const car = {
+      ...t, vx: dir * speed, wheel: 0,
+      x: dir < 0 ? cam.x + view.viewW + lead : cam.x - lead - t.w,
+      color: CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)],
+    };
+    game.cars.push(car);
+    startCarSound(car);
+  }
+
+  function carTouching() {
+    const p = player;
+    for (const c of game.cars) {
+      if (p.x + HW - 5 > c.x && p.x - HW + 5 < c.x + c.w && p.y > -c.h + 6 && p.y - PH < 0) return c;
+    }
+    return null;
+  }
+
+  function hitByCar(car) {
+    const p = player;
+    const dir = Math.sign(car.vx);
+    if (!gfMode) game.lives--;
+    updateHud(true);
+    const hearts = $('hud-hearts');
+    hearts.classList.remove('hurt');
+    void hearts.offsetWidth;
+    hearts.classList.add('hurt');
+    playSfx('crash');
+    if (navigator.vibrate) { try { navigator.vibrate([60, 30, 60]); } catch (e) { /* ignore */ } }
+    // cartoon knock-back: fly away from the car, spinning
+    p.grounded = false;
+    p.on = null;
+    p.vx = dir * 520;
+    p.vy = -800;
+    p.spin = 0;
+    p.spinRate = dir * 13;
+    p.takeoffY = p.y;
+    aim.active = false;
+    setState('hit');
+    for (let i = 0; i < 10; i++) {
+      const a = Math.random() * Math.PI * 2;
+      particles.push({
+        x: p.x, y: p.y - PH / 2, vx: Math.cos(a) * 220, vy: Math.sin(a) * 220,
+        life: 0.5, t: 0, r: 3 + Math.random() * 3, color: 'rgba(255,230,90,', grav: 0,
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -898,6 +1167,7 @@
     if (pl.kind === 'trampoline') { bounce(pl); return; }
     const p = player;
     const impact = p.vy;
+    const wasHit = p.state === 'hit';
     p.y = pl.y;
     p.vx = 0;
     p.vy = 0;
@@ -914,7 +1184,14 @@
       showToast('Checkpoint ' + pl.label.replace(/ /g, ''));
     }
     if (pl.kind === 'breakable' && !pl.cracking) { pl.cracking = true; pl.crackT = 0; }
-    if (pl === level.goal) win();
+    if (wasHit) {
+      // back on its feet, blinking (and safe from cars) for a moment
+      p.spin = 0;
+      game.blink = BLINK_TIME;
+      if (game.lives <= 0) { gameOver(); return; }
+    }
+    const reachedForest = level.goal.kind === 'forest' && p.x >= level.goal.x;
+    if (pl === level.goal || reachedForest) win();
     else saveProgress();
   }
 
@@ -1089,10 +1366,26 @@
     // Screen-space wall behind the door (visible on wide screens)
     ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
     const g = ctx.createLinearGradient(0, 0, 0, view.cssH);
-    g.addColorStop(0, '#2a2038');
-    g.addColorStop(1, '#1b1526');
+    if (level.theme === 'street') {
+      g.addColorStop(0, '#6ec3ff');
+      g.addColorStop(1, '#d9f1ff');
+    } else {
+      g.addColorStop(0, '#2a2038');
+      g.addColorStop(1, '#1b1526');
+    }
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, view.cssW, view.cssH);
+    if (level.theme === 'street') {
+      // sun
+      const sx = view.cssW - 90, sy = 80;
+      const sg = ctx.createRadialGradient(sx, sy, 10, sx, sy, 90);
+      sg.addColorStop(0, 'rgba(255, 245, 180, 0.9)');
+      sg.addColorStop(1, 'rgba(255, 245, 180, 0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(sx, sy, 90, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffe066';
+      ctx.beginPath(); ctx.arc(sx, sy, 34, 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   function worldTransform() {
@@ -1156,6 +1449,17 @@
     // Wide floor across the whole screen, even outside the level
     const left = cam.x - 10;
     const right = cam.x + view.viewW + 10;
+    if (level.theme === 'street') {
+      ctx.fillStyle = '#495057';
+      ctx.fillRect(left, 0, right - left, 120);
+      ctx.fillStyle = '#adb5bd';
+      ctx.fillRect(left, 0, right - left, 5);          // curb edge
+      ctx.fillStyle = '#f8f9fa';
+      for (let x = Math.floor(left / 120) * 120; x < right; x += 120) ctx.fillRect(x, 52, 64, 6);  // lane markings
+      ctx.fillStyle = '#69a85f';
+      ctx.fillRect(left, 120, right - left, 680);
+      return;
+    }
     if (level.theme === 'kitchen') {
       // checkered tiles
       const T = 40;
@@ -1216,6 +1520,337 @@
     if (ceil > top && ceil < bottom + 40) ctx.fillRect(-20, ceil - 30, level.width + 40, 30);
   }
 
+  // Sunny street: parallax clouds and buildings, then the forest at the end.
+  function drawStreet() {
+    const left = cam.x - 20;
+    const right = cam.x + view.viewW + 20;
+
+    // clouds (slow parallax)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    for (const c of level.clouds) {
+      const x = c.x + cam.x * 0.85;
+      if (x + 160 < left || x - 60 > right) continue;
+      const r = 26 * c.s;
+      ctx.beginPath();
+      ctx.arc(x, c.y, r, 0, Math.PI * 2);
+      ctx.arc(x + r * 1.1, c.y - r * 0.5, r * 1.2, 0, Math.PI * 2);
+      ctx.arc(x + r * 2.3, c.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(x, c.y, r * 2.3, r);
+    }
+
+    // buildings and shops (half-speed parallax)
+    for (const h of level.houses) {
+      const x = h.x + cam.x * 0.5;
+      if (x + h.w < left || x > right) continue;
+      drawBuilding(h, x);
+    }
+    // haze, so the background reads as far away
+    ctx.fillStyle = 'rgba(215, 238, 255, 0.4)';
+    ctx.fillRect(left, cam.y - 20, right - left, -26 - cam.y + 20);
+
+    // sidewalk behind the road
+    ctx.fillStyle = '#d5d0c8';
+    ctx.fillRect(left, -26, right - left, 26);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.07)';
+    for (let x = Math.floor(left / 60) * 60; x < right; x += 60) ctx.fillRect(x, -26, 2, 26);
+
+    // forest at the end
+    const fx = level.goal.x;
+    if (right > fx - 200) {
+      ctx.fillStyle = '#5d9c59';
+      ctx.fillRect(fx - 40, -60, level.width - fx + 600, 60);
+      for (const t of level.trees) {
+        if (t.x + t.r < left || t.x - t.r > right) continue;
+        ctx.fillStyle = '#7a5230';
+        ctx.fillRect(t.x - 7, -t.h * 0.55, 14, t.h * 0.55);
+        const greens = t.shade < 0.5 ? ['#2f7d4f', '#3f9a5f'] : ['#2a6b45', '#4caf6d'];
+        ctx.fillStyle = greens[0];
+        ctx.beginPath(); ctx.arc(t.x, -t.h * 0.6, t.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = greens[1];
+        ctx.beginPath(); ctx.arc(t.x - t.r * 0.3, -t.h * 0.75, t.r * 0.75, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(t.x + t.r * 0.35, -t.h * 0.9, t.r * 0.6, 0, Math.PI * 2); ctx.fill();
+      }
+      // signpost at the forest edge
+      ctx.fillStyle = '#8a5a32';
+      ctx.fillRect(fx - 4, -110, 8, 110);
+      roundRect(fx - 46, -128, 92, 30, 6);
+      ctx.fillStyle = '#a8703f';
+      ctx.fill();
+      ctx.fillStyle = '#fff6e0';
+      ctx.font = '700 14px Fredoka, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('FOREST \u2192', fx, -113);
+    }
+  }
+
+  function drawBuilding(h, x) {
+    const y = -26 - h.h;
+    ctx.fillStyle = h.color;
+    ctx.fillRect(x, y, h.w, h.h);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
+    ctx.fillRect(x + h.w - 10, y, 10, h.h);
+    if (h.style === 'house') {
+      ctx.fillStyle = '#b5523b';
+      ctx.beginPath(); ctx.moveTo(x - 10, y); ctx.lineTo(x + h.w / 2, y - 60); ctx.lineTo(x + h.w + 10, y); ctx.fill();
+    } else {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+      ctx.fillRect(x - 4, y, h.w + 8, 10);
+    }
+    // windows
+    ctx.fillStyle = 'rgba(120, 170, 210, 0.75)';
+    const shopFloor = h.style === 'shop' ? 80 : 0;
+    for (let wy = y + 22; wy < -26 - 40 - shopFloor; wy += 50) {
+      for (let wx = x + 18; wx < x + h.w - 34; wx += 44) ctx.fillRect(wx, wy, 24, 30);
+    }
+    if (h.style === 'shop') {
+      // shop front with a striped awning and a sign
+      const by = -26 - 80;
+      ctx.fillStyle = 'rgba(150, 200, 230, 0.85)';
+      ctx.fillRect(x + 14, by + 26, h.w - 60, 54);
+      ctx.fillStyle = 'rgba(90, 60, 40, 0.8)';
+      ctx.fillRect(x + h.w - 40, by + 26, 26, 54);
+      for (let k = 0; k < h.w; k += 20) {
+        ctx.fillStyle = (k / 20) % 2 ? '#fff' : `hsl(${h.hue}, 70%, 60%)`;
+        ctx.fillRect(x + k, by + 6, Math.min(20, h.w - k), 16);
+      }
+      ctx.fillStyle = `hsl(${h.hue}, 50%, 30%)`;
+      ctx.font = '700 13px Fredoka, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(h.name, x + h.w / 2, by - 8);
+    }
+  }
+
+  function drawProp(p) {
+    const { x, y, w, h } = p;
+    const shadow = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      ctx.beginPath(); ctx.ellipse(x + w / 2, 0, w * 0.55, 5, 0, 0, Math.PI * 2); ctx.fill();
+    };
+    switch (p.type) {
+      case 'hydrant':
+        shadow();
+        ctx.fillStyle = '#e03131';
+        roundRect(x + 4, y + 8, w - 8, h - 8, 5); ctx.fill();
+        roundRect(x, y + 14, w, 8, 3); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + w / 2, y + 8, w / 2 - 3, Math.PI, 0); ctx.fill();
+        break;
+      case 'trash':
+        shadow();
+        ctx.fillStyle = '#5c7cfa';
+        roundRect(x + 3, y + 6, w - 6, h - 6, 4); ctx.fill();
+        ctx.fillStyle = '#4263eb';
+        roundRect(x, y, w, 9, 4); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        for (let k = x + 10; k < x + w - 6; k += 9) ctx.fillRect(k, y + 16, 3, h - 26);
+        break;
+      case 'mailbox':
+        shadow();
+        ctx.fillStyle = '#495057';
+        ctx.fillRect(x + w / 2 - 4, y + 30, 8, h - 30);
+        ctx.fillStyle = '#1c7ed6';
+        roundRect(x, y, w, 34, 12); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + 8, y + 12, w - 16, 4);
+        break;
+      case 'crates':
+      case 'crates2':
+        shadow();
+        for (let cy = 0; cy < h; cy += 56) {
+          const by = -cy - 56;
+          ctx.fillStyle = '#c08a4f';
+          ctx.fillRect(x, by, w, 56);
+          ctx.strokeStyle = '#8a5a2b';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + 1.5, by + 1.5, w - 3, 53);
+          ctx.beginPath(); ctx.moveTo(x + 3, by + 3); ctx.lineTo(x + w - 3, by + 53); ctx.stroke();
+        }
+        break;
+      case 'bench':
+        shadow();
+        ctx.fillStyle = '#495057';
+        ctx.fillRect(x + 8, y + 8, 6, h - 8);
+        ctx.fillRect(x + w - 14, y + 8, 6, h - 8);
+        ctx.fillStyle = '#b5793f';
+        roundRect(x, y, w, 9, 3); ctx.fill();
+        ctx.fillRect(x + 4, y - 26, w - 8, 7);
+        ctx.fillRect(x + 4, y - 14, w - 8, 7);
+        break;
+      case 'wall':
+        shadow();
+        ctx.fillStyle = '#c9a27e';
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = 'rgba(120, 70, 40, 0.25)';
+        for (let r = 0; r * 18 < h; r++) {
+          ctx.fillRect(x, y + r * 18, w, 2);
+          for (let k = (r % 2) * 18; k < w; k += 36) ctx.fillRect(x + k, y + r * 18, 2, 18);
+        }
+        ctx.fillStyle = '#b08766';
+        ctx.fillRect(x - 4, y, w + 8, 8);
+        break;
+      case 'busstop':
+        shadow();
+        ctx.fillStyle = '#868e96';
+        ctx.fillRect(x + 6, y + 8, 6, h - 8);
+        ctx.fillRect(x + w - 12, y + 8, 6, h - 8);
+        ctx.fillStyle = 'rgba(180, 220, 240, 0.45)';
+        ctx.fillRect(x + 12, y + 14, w - 24, h - 50);
+        ctx.fillStyle = '#b5793f';
+        ctx.fillRect(x + 20, -34, w - 40, 7);
+        ctx.fillStyle = '#2b8a3e';
+        roundRect(x - 6, y, w + 12, 12, 4); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '700 11px Fredoka, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('BUS', x + w / 2, y + 30);
+        break;
+      case 'umbrella': {
+        shadow();
+        // café table + umbrella; the canopy is the platform
+        ctx.fillStyle = '#868e96';
+        ctx.fillRect(x + w / 2 - 2, y, 4, h);
+        ctx.fillStyle = '#e9ecef';
+        roundRect(x + w / 2 - 26, -36, 52, 6, 3); ctx.fill();
+        ctx.fillRect(x + w / 2 - 2, -36, 4, 36);
+        const segs = 6;
+        for (let k = 0; k < segs; k++) {
+          ctx.fillStyle = k % 2 ? '#fff' : `hsl(${p.hue}, 75%, 58%)`;
+          ctx.beginPath();
+          ctx.moveTo(x + w / 2, y - 14);
+          ctx.lineTo(x + (k / segs) * w, y + 6);
+          ctx.lineTo(x + ((k + 1) / segs) * w, y + 6);
+          ctx.closePath();
+          ctx.fill();
+        }
+        break;
+      }
+      case 'kiosk':
+        shadow();
+        ctx.fillStyle = `hsl(${p.hue}, 45%, 72%)`;
+        ctx.fillRect(x + 6, y + 10, w - 12, h - 10);
+        ctx.fillStyle = 'rgba(150, 200, 230, 0.9)';
+        ctx.fillRect(x + 20, y + 40, w - 40, 50);
+        ctx.fillStyle = `hsl(${p.hue}, 45%, 45%)`;
+        ctx.fillRect(x + 14, y + 96, w - 28, 10);
+        ctx.fillStyle = '#5f4b3a';
+        roundRect(x, y, w, 12, 4); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '700 12px Fredoka, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('KIOSK', x + w / 2, y + 26);
+        break;
+      case 'shop':
+        shadow();
+        ctx.fillStyle = `hsl(${p.hue}, 35%, 80%)`;
+        ctx.fillRect(x, y + 10, w, h - 10);
+        ctx.fillStyle = 'rgba(150, 200, 230, 0.9)';
+        ctx.fillRect(x + 20, -90, w - 90, 80);
+        ctx.fillStyle = '#6b4b35';
+        ctx.fillRect(x + w - 56, -96, 36, 96);
+        ctx.fillStyle = 'rgba(150, 200, 230, 0.8)';
+        ctx.fillRect(x + 24, y + 26, 50, 34);
+        ctx.fillRect(x + w - 74, y + 26, 50, 34);
+        ctx.fillStyle = `hsl(${p.hue}, 50%, 30%)`;
+        ctx.font = '700 15px Fredoka, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.name, x + w / 2, y + 44);
+        ctx.fillStyle = '#7a6a5a';
+        roundRect(x - 6, y, w + 12, 12, 4); ctx.fill();
+        break;
+      case 'awning':
+        for (let k = 0; k < w; k += 15) {
+          ctx.fillStyle = (k / 15) % 2 ? '#fff' : `hsl(${p.hue}, 70%, 58%)`;
+          ctx.beginPath();
+          ctx.moveTo(x + k, y); ctx.lineTo(x + Math.min(w, k + 15), y);
+          ctx.lineTo(x + Math.min(w, k + 15), y + h + 6); ctx.lineTo(x + k, y + h);
+          ctx.fill();
+        }
+        break;
+    }
+  }
+
+  function drawCar(c) {
+    const { x, w, h, color } = c;
+    const front = c.vx < 0 ? 0 : 1;   // which end is the front
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    ctx.beginPath(); ctx.ellipse(x + w / 2, 2, w * 0.52, 6, 0, 0, Math.PI * 2); ctx.fill();
+    // cabin
+    const vanLike = c.type === 'van';
+    const cabX = vanLike ? (front ? x + 6 : x + w * 0.28) : x + w * 0.22;
+    const cabW = vanLike ? w * 0.66 : w * 0.56;
+    roundRect(cabX, -h, cabW, h * 0.6, vanLike ? 8 : 16);
+    ctx.fillStyle = color;
+    ctx.fill();
+    // windows
+    ctx.fillStyle = 'rgba(190, 230, 255, 0.95)';
+    const wy = -h + 7;
+    const wh = h * 0.6 - 14;
+    ctx.fillRect(cabX + 9, wy, cabW / 2 - 13, wh);
+    ctx.fillRect(cabX + cabW / 2 + 4, wy, cabW / 2 - 13, wh);
+    // body
+    roundRect(x, -h * 0.5, w, h * 0.5 - 6, 10);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.fillRect(x + 6, -12, w - 12, 4);
+    // lights
+    ctx.fillStyle = '#fff3bf';
+    ctx.fillRect(front ? x + w - 8 : x, -h * 0.42, 8, 8);
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fillRect(front ? x : x + w - 6, -h * 0.42, 6, 8);
+    // wheels
+    for (const wx of [x + w * 0.2, x + w * 0.8]) {
+      ctx.fillStyle = '#212529';
+      ctx.beginPath(); ctx.arc(wx, -13, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#adb5bd';
+      ctx.beginPath(); ctx.arc(wx, -13, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#495057';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(wx + Math.cos(c.wheel) * 11, -13 + Math.sin(c.wheel) * 11);
+      ctx.lineTo(wx - Math.cos(c.wheel) * 11, -13 - Math.sin(c.wheel) * 11);
+      ctx.stroke();
+    }
+  }
+
+  // Off-screen cars about to arrive get a warning sign at the screen edge.
+  function drawCarWarnings() {
+    if (!level.cars || game.wonAt) return;
+    ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+    const groundY = (-40 - cam.y) * view.scale;
+    for (const c of game.cars) {
+      const sx = (c.x - cam.x) * view.scale;
+      const sw = c.w * view.scale;
+      let edge = null;
+      let dist = 0;
+      if (c.vx < 0 && sx > view.cssW) { edge = 'right'; dist = sx - view.cssW; }
+      if (c.vx > 0 && sx + sw < 0) { edge = 'left'; dist = -(sx + sw); }
+      if (!edge) continue;
+      const eta = dist / view.scale / Math.abs(c.vx);
+      if (eta > 1.4) continue;
+      const pulse = 0.6 + 0.4 * Math.sin(game.clock * 18);
+      const cx = edge === 'right' ? view.cssW - 34 : 34;
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = '#ffd43b';
+      ctx.strokeStyle = '#212529';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, groundY - 22); ctx.lineTo(cx + 22, groundY + 16); ctx.lineTo(cx - 22, groundY + 16);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#212529';
+      ctx.font = '800 22px Fredoka, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('!', cx, groundY + 4);
+      ctx.globalAlpha = 1;
+    }
+  }
+
   function drawDecor(d) {
     const { x, y, w, h } = d;
     if (d.kind === 'cabinet') {
@@ -1268,6 +1903,7 @@
     if (p.kind === 'floor') return;
     if (p.kind === 'handle') { drawHandle(p); return; }
     if (p.kind === 'can') { drawCan(p); return; }
+    if (p.kind === 'prop') { drawProp(p); return; }
     if (p.kind === 'trampoline') { drawTrampoline(p); return; }
     if (p.kind === 'breakable') { drawBreakable(p); return; }
 
@@ -1484,7 +2120,7 @@
     const p = player;
     const pose = POSE_FOR_STATE[p.state] || 'idle';
     const img = set[pose];
-    const k = set.scale;
+    const k = pose === 'hit' ? set.hitScale : set.scale;
 
     let x = p.x, y = p.y;
     // ride the handle down during the win animation
@@ -1511,7 +2147,7 @@
 
     const w = img.width * k;
     const h = img.height * k;
-    const air = pose === 'jump' || pose === 'falling';
+    const air = pose === 'jump' || pose === 'falling' || pose === 'hit';
     const sx = p.squash;
     const sy = 1 / p.squash;
 
@@ -1522,7 +2158,8 @@
     if (air) {
       ctx.translate(x, y - PH / 2);
       ctx.scale(sx, sy);
-      if (p.facing < 0) ctx.scale(-1, 1);
+      if (pose === 'hit') ctx.rotate(p.spin);
+      else if (p.facing < 0) ctx.scale(-1, 1);
       ctx.drawImage(img, -w / 2, -h / 2, w, h);
     } else {
       ctx.translate(x, y + 2);
@@ -1634,7 +2271,9 @@
   function render() {
     drawBackground();
     worldTransform();
-    if (level.theme === 'kitchen') drawKitchen(); else drawDoor();
+    if (level.theme === 'kitchen') drawKitchen();
+    else if (level.theme === 'street') drawStreet();
+    else drawDoor();
     drawFloor();
 
     const top = cam.y - 40;
@@ -1645,12 +2284,14 @@
       if (p.y + p.h < top || p.y - 40 > bottom || p.x > right || p.x + p.w < left) continue;
       drawPlatform(p);
     }
+    if (level.cars) for (const c of game.cars) drawCar(c);
     if (game.running) {
       drawJetpackItem();
       drawPlayer();
       drawParticles();
       drawAimArrow();
       drawDragGuide();
+      drawCarWarnings();
     }
     drawWinGlow();
   }
@@ -1692,6 +2333,7 @@
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
 
+    syncAudioPause();
     if (game.running && !game.paused && !wrongOrientation) {
       accumulator += dt;
       while (accumulator >= STEP) {
@@ -1743,11 +2385,14 @@
 
   function stopRun() {
     saveProgress();
+    stopAllCarSounds();
+    game.cars = [];
     game.running = false;
     game.paused = false;
     $('hud').classList.add('hidden');
     checkOrientation();
-    lockOrientation('portrait');
+    releaseOrientation();
+    setPlaylist(LEVELS[1].music);
   }
 
   function toMenu() {
@@ -1836,6 +2481,9 @@
   window.addEventListener('pointerdown', unlockAudio, true);
   window.addEventListener('keydown', unlockAudio, true);
   $('btn-sound').addEventListener('click', () => setMuted(!audio.muted));
+  document.querySelectorAll('.fs-btn').forEach((b) => b.addEventListener('click', toggleFullscreen));
+  document.addEventListener('fullscreenchange', updateFullscreenButtons);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenButtons);
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' || e.key === 'p') {
       if (game.paused) resume(); else pause();
@@ -1849,6 +2497,10 @@
   // Boot
   // ---------------------------------------------------------------------------
   resize();
+  updateFullscreenButtons();
+  // iPhone can't do fullscreen from a web page, but a home screen app opens fullscreen
+  const isIOS = /iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone;
+  $('ios-tip').classList.toggle('hidden', !isIOS || fsSupported);
   setDirectAim(directAim);
   $('opt-gf').checked = gfMode;
   initAudio();
@@ -1861,5 +2513,5 @@
   requestAnimationFrame(frame);
 
   // debug hook for testing in the console
-  window.__game = { game, player, get level() { return level; }, LEVELS, jump, startGame, simulateFlight };
+  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight };
 })();
