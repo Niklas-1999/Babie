@@ -80,7 +80,35 @@
           <span class="track"><span class="knob"></span></span>
           <span>Girlfriend Mode &#9829; (infinite lives)</span>
         </label>
-        <p class="best" id="best-time"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Level select -->
+  <section id="levels" class="screen hidden">
+    <div class="panel">
+      <p class="eyebrow" id="levels-cat">Playing as</p>
+      <h2>Choose a level</h2>
+      <div class="levels">
+        <button class="level-card" data-level="1">
+          <div class="level-icon door">&#128682;</div>
+          <div class="level-info">
+            <div class="level-name"><span class="level-num">1</span> Open the Door</div>
+            <div class="level-desc">Climb up the door to the handle</div>
+            <div class="level-meta"><span class="orient portrait">Portrait</span><span class="level-best" id="best-1"></span></div>
+          </div>
+        </button>
+        <button class="level-card" data-level="2">
+          <div class="level-icon kitchen">&#129387;</div>
+          <div class="level-info">
+            <div class="level-name"><span class="level-num">2</span> Kitchen Raid</div>
+            <div class="level-desc">Trampolines, crumbly crackers &amp; cat food</div>
+            <div class="level-meta"><span class="orient landscape">Landscape</span><span class="level-best" id="best-2"></span></div>
+          </div>
+        </button>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="btn-levels-back">Back</button>
       </div>
     </div>
   </section>
@@ -92,7 +120,7 @@
       <div class="actions col">
         <button class="btn primary" id="btn-resume">Resume</button>
         <button class="btn ghost" id="btn-restart">Restart</button>
-        <button class="btn ghost" id="btn-menu">Change cat</button>
+        <button class="btn ghost" id="btn-menu">Levels</button>
       </div>
       <label class="toggle">
         <input type="checkbox" id="opt-invert-2">
@@ -106,7 +134,7 @@
   <section id="win" class="screen hidden">
     <div class="panel">
       <p class="eyebrow">You made it!</p>
-      <h2>Door opened!</h2>
+      <h2 id="win-title">Door opened!</h2>
       <div class="win-cat"><img id="win-img" src="" alt=""></div>
       <div class="stats">
         <div><span class="stat-val" id="win-time">0:00</span><span class="stat-label">Time</span></div>
@@ -116,7 +144,7 @@
       <p class="best" id="win-best"></p>
       <div class="actions">
         <button class="btn primary" id="btn-again">Play again</button>
-        <button class="btn ghost" id="btn-win-menu">Menu</button>
+        <button class="btn ghost" id="btn-win-menu">Levels</button>
       </div>
     </div>
   </section>
@@ -126,7 +154,7 @@
     <div class="panel">
       <p class="eyebrow">Out of lives</p>
       <h2>Game over</h2>
-      <p class="sub">The door stays shut… for now.</p>
+      <p class="sub" id="over-sub">The door stays shut… for now.</p>
       <div class="stats">
         <div><span class="stat-val" id="over-progress">0%</span><span class="stat-label">Reached</span></div>
         <div><span class="stat-val" id="over-time">0:00</span><span class="stat-label">Time</span></div>
@@ -134,10 +162,17 @@
       </div>
       <div class="actions">
         <button class="btn primary" id="btn-over-again">Try again</button>
-        <button class="btn ghost" id="btn-over-menu">Menu</button>
+        <button class="btn ghost" id="btn-over-menu">Levels</button>
       </div>
     </div>
   </section>
+
+  <!-- Shown on phones held the wrong way for the current level -->
+  <div id="rotate" class="hidden">
+    <div class="rotate-phone"></div>
+    <p id="rotate-text">Turn your phone sideways</p>
+    <p class="rotate-sub">The game is paused until then</p>
+  </div>
 
   <div id="loading" class="screen"><div class="spinner"></div></div>
 
