@@ -7,6 +7,8 @@ A tiny mobile-first jump-only platformer. Pick **Mallow** or **Mischko**, then a
 
 3. **Street Dash** (landscape) – a sunny street; cars drive by every few seconds. Jump over them (or wait on umbrellas, kiosks, bus stops and shop roofs) and reach the forest at the far right. You hear a car about 2 seconds before it drives into view, and a ⚠ sign shows which side it comes from. Getting hit costs a heart and sends the cat flying.
 
+4. **Vet Visit** (landscape, fixed camera) – survive 2 minutes on the exam table while syringes drop from the ceiling. A red target marks where each one will land the moment it appears; the shrinking ring shows when. It gets faster over time, with occasional rows of syringes that leave one gap. Ranked by fewest hits.
+
 Each level has its own music. The ⛶ button (menu and in-game) switches to fullscreen; on iPhone use Share → Add to Home Screen instead.
 
 On phones the game pauses with a "turn your phone" prompt if it's held the wrong way for the level (Android also tries to lock landscape automatically for level 2).

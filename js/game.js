@@ -305,6 +305,24 @@
     };
   }
 
+  // Level 4 (landscape): on the vet's exam table. Survive 2 minutes of falling syringes.
+  const SURVIVE_TIME = 120;
+
+  function buildVetLevel() {
+    const width = 640;
+    const plats = [
+      { kind: 'floor', x: -600, y: 0, w: width + 1200, h: 800 },
+      { kind: 'prop', type: 'towels', x: 118, y: -46, w: 88, h: 46 },
+      { kind: 'prop', type: 'scale', x: 420, y: -30, w: 112, h: 30 },
+    ];
+    return {
+      id: 4, theme: 'vet', width, plats, topY: -330, spawnX: width / 2, jetX: null,
+      goal: { kind: 'survive', x: width / 2 - 20, y: -100, w: 40, h: 0 },
+      landscape: true, viewW: width, viewH: 400, staticCam: true, ceilY: -300,
+      survive: SURVIVE_TIME, needles: true,
+    };
+  }
+
   function makeMoving(p, R, width) {
     p.kind = 'moving';
     p.amp = R(30, 60);
@@ -343,6 +361,9 @@
       music: ['Bouncy Banjo Run.mp3', 'Bouncy Banjo Run2.mp3'] },
     3: { name: 'Street Dash', build: buildStreetLevel, winTitle: 'Into the forest!', loseText: 'Too much traffic… try again.',
       music: ['Jaunty Guitar Motif.mp3', 'Jaunty Guitar Motif2.mp3'], intro: 'Jump over the cars!' },
+    // TODO: own music and hit sound once they're in assets/sounds
+    4: { name: 'Vet Visit', build: buildVetLevel, winTitle: 'Survived the vet!', loseText: 'The vet got you… try again.',
+      music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'], intro: 'Dodge the needles for 2 minutes!', survival: true },
   };
 
   let level = buildDoorLevel();
@@ -639,6 +660,9 @@
     over: false,
     cars: [],
     carTimer: 0,
+    needles: [],
+    needleTimer: 0,
+    hits: 0,
   };
 
   const player = {
@@ -685,6 +709,9 @@
     stopAllCarSounds();
     game.cars = [];
     game.carTimer = 1;
+    game.needles = [];
+    game.needleTimer = 1.5;
+    game.hits = 0;
     player.spin = 0;
     particles.length = 0;
     aim.active = false;
@@ -726,6 +753,7 @@
 
   function saveProgress() {
     if (!game.running || game.wonAt || !player.grounded || !player.on) return;
+    if (level.survive) return;   // survival rounds always start fresh
     const idx = level.plats.indexOf(player.on);
     store.set('save', {
       cat: game.catKey, level: game.levelId, plat: idx, rel: player.x - player.on.x,
@@ -736,6 +764,7 @@
   }
 
   function progress() {
+    if (level.survive) return clamp(game.time / level.survive, 0, 1);
     if (level.landscape) return clamp((player.x - level.spawnX) / (level.goal.x - level.spawnX), 0, 1);
     return clamp(-player.y / -level.goal.y, 0, 1);
   }
@@ -862,14 +891,20 @@
     game.clock += dt;
     updatePlatforms(dt);
     updateCars(dt);
+    updateNeedles(dt);
 
     const p = player;
     if (game.wonAt || game.over) return;
+    if (level.survive && game.time >= level.survive && p.grounded && p.state !== 'hit') { surviveWin(); return; }
     if (game.jet) { updateJet(dt); return; }
     if (touchesJetpack()) { startJet(); return; }
     if (level.cars && game.blink <= 0 && p.state !== 'hit') {
       const car = carTouching();
       if (car) hitByCar(car);
+    }
+    if (level.needles && game.blink <= 0 && p.state !== 'hit') {
+      const n = needleTouching();
+      if (n) { n.spent = true; hurt(p.x >= n.x ? 1 : -1, 380); }
     }
     if (p.state === 'hit') p.spin += p.spinRate * dt;
 
@@ -896,6 +931,7 @@
     // Side walls
     if (p.x - HW < 0) { p.x = HW; p.vx = Math.abs(p.vx) * WALL_BOUNCE; p.facing = 1; }
     if (p.x + HW > level.width) { p.x = level.width - HW; p.vx = -Math.abs(p.vx) * WALL_BOUNCE; p.facing = -1; }
+    if (level.ceilY != null && p.y - PH < level.ceilY) { p.y = level.ceilY + PH; p.vy = Math.max(p.vy, 0); }
 
     if (level.goal.kind === 'can' && touchesCan()) { reachCan(); return; }
 
@@ -971,8 +1007,13 @@
   }
 
   function hitByCar(car) {
+    hurt(Math.sign(car.vx), 520);
+  }
+
+  // Cartoon knock-back shared by cars and needles: lose a heart, fly away spinning.
+  function hurt(dir, speed) {
     const p = player;
-    const dir = Math.sign(car.vx);
+    game.hits++;
     if (!gfMode) game.lives--;
     updateHud(true);
     const hearts = $('hud-hearts');
@@ -981,10 +1022,9 @@
     hearts.classList.add('hurt');
     playSfx('crash');
     if (navigator.vibrate) { try { navigator.vibrate([60, 30, 60]); } catch (e) { /* ignore */ } }
-    // cartoon knock-back: fly away from the car, spinning
     p.grounded = false;
     p.on = null;
-    p.vx = dir * 520;
+    p.vx = dir * speed;
     p.vy = -800;
     p.spin = 0;
     p.spinRate = dir * 13;
@@ -1001,10 +1041,111 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Syringes (level 4)
+  // ---------------------------------------------------------------------------
+  const NEEDLE_HIT = 50;      // length of the dangerous part above the tip
+
+  function surfaceBelow(x) {
+    let y = 0;
+    for (const pl of level.plats) {
+      if (pl.kind !== 'floor' && x > pl.x && x < pl.x + pl.w && pl.y < y) y = pl.y;
+    }
+    return y;
+  }
+
+  function spawnNeedle(x, t, extraDelay) {
+    x = clamp(x, 26, level.width - 26);
+    const startY = cam.y + 178;          // tip position while it hangs at the top (below the HUD)
+    const impactY = surfaceBelow(x);
+    const speed = lerp(330, 560, t);
+    const delay = lerp(1.15, 0.62, t) + extraDelay;
+    game.needles.push({
+      x, y: startY, impactY, speed, delay, age: 0,
+      total: delay + (impactY - startY) / speed,
+      stuck: false, stuckT: 0, spent: false,
+      hue: [190, 140, 330, 45][Math.floor(Math.random() * 4)],
+    });
+  }
+
+  // A row of syringes with one gap to slip through
+  function spawnNeedleWave(t) {
+    const count = 6;
+    const step = (level.width - 60) / (count - 1);
+    const gap = Math.floor(Math.random() * count);
+    for (let k = 0; k < count; k++) {
+      if (k === gap) continue;
+      spawnNeedle(30 + k * step + (Math.random() - 0.5) * 16, t, k * 0.07);
+    }
+  }
+
+  function updateNeedles(dt) {
+    if (!level.needles) return;
+    const t = progress();
+    if (!game.wonAt && !game.over && game.time < level.survive) {
+      game.needleTimer -= dt;
+      if (game.needleTimer <= 0) {
+        if (game.time > 12 && Math.random() < lerp(0.08, 0.2, t)) {
+          spawnNeedleWave(t);
+          game.needleTimer = 1.6;
+        } else {
+          const aimed = Math.random() < 0.45;
+          spawnNeedle(aimed ? player.x + (Math.random() - 0.5) * 50 : 30 + Math.random() * (level.width - 60), t, 0);
+          game.needleTimer = lerp(1.25, 0.42, t) * (0.8 + Math.random() * 0.4);
+        }
+      }
+    }
+    for (let i = game.needles.length - 1; i >= 0; i--) {
+      const n = game.needles[i];
+      n.age += dt;
+      if (n.stuck) {
+        n.stuckT += dt;
+        if (n.stuckT > 0.8) game.needles.splice(i, 1);
+      } else if (n.delay > 0) {
+        n.delay -= dt;
+      } else {
+        n.y += n.speed * dt;
+        if (n.y >= n.impactY) {
+          n.y = n.impactY;
+          n.stuck = true;
+          for (let k = 0; k < 5; k++) {
+            particles.push({
+              x: n.x, y: n.y - 2, vx: (Math.random() - 0.5) * 140, vy: -Math.random() * 120,
+              life: 0.35, t: 0, r: 1.5 + Math.random() * 2, color: 'rgba(230,240,250,', grav: 600,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  function needleTouching() {
+    const p = player;
+    for (const n of game.needles) {
+      if (n.stuck || n.spent || n.delay > 0) continue;
+      if (Math.abs(n.x - p.x) < HW + 3 && n.y > p.y - PH && n.y - NEEDLE_HIT < p.y) return n;
+    }
+    return null;
+  }
+
+  function surviveWin() {
+    for (const n of game.needles) {
+      for (let k = 0; k < 4; k++) {
+        particles.push({
+          x: n.x, y: n.y - 40, vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.5) * 120,
+          life: 0.4, t: 0, r: 3, color: 'rgba(255,255,255,', grav: 0,
+        });
+      }
+    }
+    game.needles = [];
+    setState('won');
+    win();
+  }
+
+  // ---------------------------------------------------------------------------
   // Jetpack (Girlfriend Mode only): flies the cat straight to the door handle
   // ---------------------------------------------------------------------------
   function jetpackAvailable() {
-    return gfMode && !game.jetpackTaken;
+    return gfMode && !game.jetpackTaken && level.jetX != null;
   }
 
   function touchesJetpack() {
@@ -1292,6 +1433,7 @@
   // Win
   // ---------------------------------------------------------------------------
   function bestKey(id) { return id === 1 ? 'best' : 'best' + id; }
+  function hitsText(n) { return n + (n === 1 ? ' hit' : ' hits'); }
 
   function win() {
     game.wonAt = game.clock;
@@ -1299,23 +1441,28 @@
     aim.active = false;
     store.del('save');
     $('hint').classList.add('fade');
-    spawnConfetti(level.goal.x + level.goal.w / 2, level.goal.y);
+    if (level.survive) spawnConfetti(player.x, player.y - 60);
+    else spawnConfetti(level.goal.x + level.goal.w / 2, level.goal.y);
     if (navigator.vibrate) { try { navigator.vibrate([30, 60, 30]); } catch (e) { /* ignore */ } }
 
     const key = bestKey(game.levelId);
     const best = store.get(key, null);
-    const isBest = !best || game.time < best.time;
-    if (isBest) store.set(key, { time: game.time, cat: game.catKey, jumps: game.jumps });
+    // survival rounds are ranked by fewest hits, the others by time
+    const isBest = !best || (level.survive ? game.hits < best.hits : game.time < best.time);
+    if (isBest) store.set(key, { time: game.time, cat: game.catKey, jumps: game.jumps, hits: game.hits });
 
     setTimeout(() => {
       $('win-img').src = CATS[game.catKey].dir + CATS[game.catKey].prefix + 'sitting.png';
       $('win-img').alt = CATS[game.catKey].name;
       $('win-time').textContent = formatTime(game.time, false);
       $('win-jumps').textContent = game.jumps;
-      $('win-falls').textContent = game.falls;
+      const showHits = level.cars || level.needles;
+      $('win-falls').textContent = showHits ? game.hits : game.falls;
+      $('win-falls-label').textContent = showHits ? 'Hits' : 'Big falls';
       const b = store.get(key, null);
       $('win-title').textContent = LEVELS[game.levelId].winTitle;
-      $('win-best').textContent = isBest ? 'New best time!' : (b ? 'Best: ' + formatTime(b.time) : '');
+      if (level.survive) $('win-best').textContent = isBest ? 'New record!' : (b ? 'Best: ' + hitsText(b.hits) : '');
+      else $('win-best').textContent = isBest ? 'New best time!' : (b ? 'Best: ' + formatTime(b.time) : '');
       $('hud').classList.add('hidden');
       checkOrientation();
       showScreen('win');
@@ -1326,6 +1473,12 @@
   // Camera
   // ---------------------------------------------------------------------------
   function clampCamera() {
+    if (level.staticCam) {
+      // one fixed shot: the whole table, table top near the bottom
+      cam.x = (level.width - view.viewW) / 2;
+      cam.y = -view.viewH * 0.8;
+      return;
+    }
     const maxY = 90 - view.viewH;          // don't show much below the floor
     const minY = level.topY;               // don't go past the top of the level
     cam.y = clamp(cam.y, minY, Math.max(minY, maxY));
@@ -1369,6 +1522,9 @@
     if (level.theme === 'street') {
       g.addColorStop(0, '#6ec3ff');
       g.addColorStop(1, '#d9f1ff');
+    } else if (level.theme === 'vet') {
+      g.addColorStop(0, '#d7efe9');
+      g.addColorStop(1, '#bfe3da');
     } else {
       g.addColorStop(0, '#2a2038');
       g.addColorStop(1, '#1b1526');
@@ -1449,6 +1605,22 @@
     // Wide floor across the whole screen, even outside the level
     const left = cam.x - 10;
     const right = cam.x + view.viewW + 10;
+    if (level.theme === 'vet') {
+      // room floor, then the steel exam table filling the view
+      ctx.fillStyle = '#9ec9c0';
+      ctx.fillRect(left, 60, right - left, 740);
+      ctx.fillStyle = '#7a8a90';
+      ctx.fillRect(40, 16, 14, 60);
+      ctx.fillRect(level.width - 54, 16, 14, 60);
+      const tg = ctx.createLinearGradient(0, 0, 0, 18);
+      tg.addColorStop(0, '#f1f3f5');
+      tg.addColorStop(1, '#adb5bd');
+      ctx.fillStyle = tg;
+      roundRect(0, 0, level.width, 18, 6); ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillRect(8, 2, level.width - 16, 2);
+      return;
+    }
     if (level.theme === 'street') {
       ctx.fillStyle = '#495057';
       ctx.fillRect(left, 0, right - left, 120);
@@ -1762,6 +1934,31 @@
         ctx.fillStyle = '#7a6a5a';
         roundRect(x - 6, y, w + 12, 12, 4); ctx.fill();
         break;
+      case 'towels': {
+        const cols = ['#a5d8ff', '#ffc9c9', '#b2f2bb'];
+        for (let k = 0; k < 3; k++) {
+          roundRect(x + (k % 2) * 4, y + k * 15, w - 4, 15, 6);
+          ctx.fillStyle = cols[k];
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.5)';
+          ctx.fillRect(x + 8, y + k * 15 + 3, w - 20, 2);
+        }
+        break;
+      }
+      case 'scale':
+        ctx.fillStyle = '#dee2e6';
+        roundRect(x, y, w, h, 6); ctx.fill();
+        ctx.fillStyle = '#adb5bd';
+        ctx.fillRect(x, y, w, 5);
+        roundRect(x + w / 2 - 22, y + 10, 44, 14, 3);
+        ctx.fillStyle = '#2b3a42';
+        ctx.fill();
+        ctx.fillStyle = '#69db7c';
+        ctx.font = '700 10px Fredoka, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('4.2 kg', x + w / 2, y + 17);
+        break;
       case 'awning':
         for (let k = 0; k < w; k += 15) {
           ctx.fillStyle = (k / 15) % 2 ? '#fff' : `hsl(${p.hue}, 70%, 58%)`;
@@ -1772,6 +1969,119 @@
         }
         break;
     }
+  }
+
+  // Vet's office: a fixed view of the wall behind the exam table.
+  function drawVetRoom() {
+    const left = cam.x - 20;
+    const right = cam.x + view.viewW + 20;
+    // wall tiles (lower half) and a rail
+    ctx.fillStyle = '#e8f6f2';
+    ctx.fillRect(left, -150, right - left, 150);
+    ctx.fillStyle = 'rgba(80, 140, 130, 0.12)';
+    for (let x = Math.floor(left / 40) * 40; x < right; x += 40) ctx.fillRect(x, -150, 2, 150);
+    for (let y = -150; y < 0; y += 40) ctx.fillRect(left, y, right - left, 2);
+    ctx.fillStyle = '#8cc9bb';
+    ctx.fillRect(left, -156, right - left, 8);
+
+    // window with blinds
+    roundRect(30, -300, 150, 120, 6);
+    ctx.fillStyle = '#bfe6ff';
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    for (let y = -296; y < -230; y += 10) ctx.fillRect(34, y, 142, 5);
+
+    // poster with a paw and a cross
+    roundRect(250, -310, 140, 120, 8);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.fillStyle = '#ff8fa3';
+    ctx.beginPath(); ctx.arc(320, -240, 20, 0, Math.PI * 2); ctx.fill();
+    for (const [dx, dy] of [[-22, -28], [-8, -38], [8, -38], [22, -28]]) {
+      ctx.beginPath(); ctx.arc(320 + dx, -240 + dy, 8, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#2f9e88';
+    ctx.font = '700 14px Fredoka, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('HAPPY PETS', 320, -205);
+    ctx.fillStyle = '#e03131';
+    ctx.fillRect(366, -302, 6, 18);
+    ctx.fillRect(360, -296, 18, 6);
+
+    // cabinet with jars
+    roundRect(450, -320, 160, 150, 8);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#9fd4c8';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillStyle = '#9fd4c8';
+    ctx.fillRect(452, -248, 156, 4);
+    const jars = ['#ffc9c9', '#a5d8ff', '#b2f2bb', '#ffec99', '#d0bfff'];
+    for (let k = 0; k < 5; k++) {
+      ctx.fillStyle = jars[k];
+      roundRect(462 + k * 29, -290, 22, 38, 5); ctx.fill();
+      roundRect(462 + k * 29, -236, 22, 52, 5); ctx.fill();
+    }
+  }
+
+  function drawNeedle(n) {
+    let alpha = 1;
+    if (n.stuck) alpha = 1 - n.stuckT / 0.8;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(n.x, n.y);
+    if (n.delay > 0) ctx.rotate(Math.sin(game.clock * 16 + n.x) * 0.06);   // wobble before dropping
+    // needle
+    ctx.strokeStyle = '#adb5bd';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -30); ctx.stroke();
+    // hub
+    ctx.fillStyle = '#868e96';
+    ctx.fillRect(-4, -36, 8, 6);
+    // barrel with liquid
+    ctx.fillStyle = 'rgba(235, 248, 255, 0.85)';
+    ctx.strokeStyle = '#74a9c4';
+    ctx.lineWidth = 2;
+    roundRect(-8, -92, 16, 56, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = `hsla(${n.hue}, 70%, 55%, 0.8)`;
+    ctx.fillRect(-6, -72, 12, 34);
+    ctx.fillStyle = 'rgba(60, 100, 120, 0.6)';
+    for (let k = 0; k < 5; k++) ctx.fillRect(-7, -86 + k * 10, 5, 1.5);
+    // flange, plunger rod and thumb rest
+    ctx.fillStyle = '#74a9c4';
+    ctx.fillRect(-14, -96, 28, 5);
+    ctx.fillStyle = '#ced4da';
+    ctx.fillRect(-2, -118, 4, 24);
+    ctx.fillStyle = '#74a9c4';
+    ctx.fillRect(-10, -122, 20, 5);
+    ctx.restore();
+  }
+
+  // Red target where a syringe will land, shown from the moment it appears.
+  function drawImpact(n) {
+    if (n.stuck) return;
+    const k = clamp(n.age / n.total, 0, 1);       // 0 = just spawned, 1 = about to hit
+    const pulse = 0.5 + 0.3 * Math.sin(game.clock * 14);
+    ctx.save();
+    ctx.fillStyle = `rgba(240, 40, 60, ${0.18 + 0.25 * k})`;
+    ctx.beginPath(); ctx.ellipse(n.x, n.impactY, 24, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(220, 20, 40, ${pulse})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(n.x, n.impactY, 24, 7, 0, 0, Math.PI * 2); ctx.stroke();
+    // shrinking ring counts down to the hit
+    const r = lerp(24, 3, k);
+    ctx.strokeStyle = 'rgba(200, 0, 30, 0.9)';
+    ctx.beginPath(); ctx.ellipse(n.x, n.impactY, r, r * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
+    // faint drop line
+    ctx.strokeStyle = 'rgba(220, 20, 40, 0.18)';
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(n.x, n.impactY); ctx.stroke();
+    ctx.restore();
   }
 
   function drawCar(c) {
@@ -2273,6 +2583,7 @@
     worldTransform();
     if (level.theme === 'kitchen') drawKitchen();
     else if (level.theme === 'street') drawStreet();
+    else if (level.theme === 'vet') drawVetRoom();
     else drawDoor();
     drawFloor();
 
@@ -2285,9 +2596,11 @@
       drawPlatform(p);
     }
     if (level.cars) for (const c of game.cars) drawCar(c);
+    if (level.needles) for (const n of game.needles) drawImpact(n);
     if (game.running) {
       drawJetpackItem();
       drawPlayer();
+      if (level.needles) for (const n of game.needles) drawNeedle(n);
       drawParticles();
       drawAimArrow();
       drawDragGuide();
@@ -2316,13 +2629,13 @@
       else for (let i = 0; i < MAX_LIVES; i++) html += '<span class="heart' + (i < game.lives ? '' : ' lost') + '">' + HEART_SVG + '</span>';
       $('hud-hearts').innerHTML = html;
     }
-    setText('hud-time', formatTime(game.time));
+    setText('hud-time', formatTime(level.survive ? Math.max(0, level.survive - game.time) : game.time));
     const pct = Math.round(progress() * 100);
     setText('hud-progress-text', pct + '%');
     const w = pct + '%';
     if (hudCache.bar !== w) { hudCache.bar = w; $('hud-progress').style.width = w; }
     setText('hud-jumps', game.jumps + (game.jumps === 1 ? ' jump' : ' jumps') +
-      (game.falls ? ' · ' + game.falls + (game.falls === 1 ? ' big fall' : ' big falls') : ''));
+      (game.hits ? ' · ' + hitsText(game.hits) : game.falls ? ' · ' + game.falls + (game.falls === 1 ? ' big fall' : ' big falls') : ''));
   }
 
   // ---------------------------------------------------------------------------
@@ -2340,7 +2653,7 @@
         step(STEP);
         accumulator -= STEP;
       }
-      if (!game.wonAt) game.time += dt;
+      if (!game.wonAt && !game.over) game.time = level.survive ? Math.min(level.survive, game.time + dt) : game.time + dt;
       else game.goalAnim = lerp(game.goalAnim, 0.5, Math.min(1, dt * 4));
       updatePlayerAnim(dt);
       updateParticles(dt);
@@ -2387,6 +2700,7 @@
     saveProgress();
     stopAllCarSounds();
     game.cars = [];
+    game.needles = [];
     game.running = false;
     game.paused = false;
     $('hud').classList.add('hidden');
@@ -2411,7 +2725,8 @@
     $('levels-cat').textContent = 'Playing as ' + CATS[game.catKey].name;
     for (const id of Object.keys(LEVELS)) {
       const b = store.get(bestKey(Number(id)), null);
-      $('best-' + id).textContent = b ? 'Best: ' + formatTime(b.time) : 'Not cleared yet';
+      if (!b) $('best-' + id).textContent = 'Not cleared yet';
+      else $('best-' + id).textContent = 'Best: ' + (LEVELS[id].survival ? hitsText(b.hits || 0) : formatTime(b.time));
     }
   }
 
