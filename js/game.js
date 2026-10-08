@@ -34,7 +34,8 @@
     mallow:  { name: 'Mallow',  dir: 'assets/Mallow/',  prefix: 'mallow_' },
     mischko: { name: 'Mischko', dir: 'assets/Mischko/', prefix: 'mischko_' },
   };
-  const POSE_FILES = ['idle', 'jump', 'falling', 'landing', 'sitting', 'hit'];
+  const POSE_FILES = ['idle', 'jump', 'falling', 'landing', 'sitting', 'hit',
+    'walking_1', 'walking_2', 'walking_3', 'walking_4'];
   // game state -> sprite file
   const POSE_FOR_STATE = {
     waiting: 'idle',      // standing side view
@@ -2647,6 +2648,11 @@
     last = now;
 
     syncAudioPause();
+    if (survivor && survivor.active) {
+      survivor.frame(dt);
+      requestAnimationFrame(frame);
+      return;
+    }
     if (game.running && !game.paused && !wrongOrientation) {
       accumulator += dt;
       while (accumulator >= STEP) {
@@ -2728,6 +2734,7 @@
       if (!b) $('best-' + id).textContent = 'Not cleared yet';
       else $('best-' + id).textContent = 'Best: ' + (LEVELS[id].survival ? hitsText(b.hits || 0) : formatTime(b.time));
     }
+    if (survivor) survivor.refreshCard();
   }
 
   function refreshMenu() {
@@ -2773,9 +2780,10 @@
     const save = store.get('save', null);
     if (save && CATS[save.cat]) startGame(save.cat, LEVELS[save.level] ? save.level : 1, save);
   });
-  document.querySelectorAll('.level-card').forEach((el) => {
+  document.querySelectorAll('.level-card[data-level]').forEach((el) => {
     el.addEventListener('click', () => startGame(game.catKey, Number(el.dataset.level), null));
   });
+  $('sv-card').addEventListener('click', () => { if (survivor) survivor.openLobby(); });
   $('btn-levels-back').addEventListener('click', () => { refreshMenu(); showScreen('menu'); });
   const restart = () => startGame(game.catKey, game.levelId, null);
   $('btn-pause').addEventListener('click', pause);
@@ -2809,6 +2817,21 @@
   document.addEventListener('gesturestart', (e) => e.preventDefault());
 
   // ---------------------------------------------------------------------------
+  // Backyard Survivors (endless mode, js/survivor/)
+  // ---------------------------------------------------------------------------
+  let survivor = null;
+  try {
+    survivor = window.SV && window.SV.create({
+      canvas, ctx, view, sprites, CATS, audio, store, formatTime,
+      setPlaylist, showScreen, toLevels, setMuted,
+      getCat: () => game.catKey || 'mallow',
+    });
+  } catch (e) {
+    console.error('Backyard Survivors failed to start', e);
+    $('sv-card').classList.add('hidden');
+  }
+
+  // ---------------------------------------------------------------------------
   // Boot
   // ---------------------------------------------------------------------------
   resize();
@@ -2828,5 +2851,5 @@
   requestAnimationFrame(frame);
 
   // debug hook for testing in the console
-  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight };
+  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight, survivor };
 })();
