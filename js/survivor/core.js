@@ -45,6 +45,25 @@
     const art = SV.createArt(ctx);
     const sfx = SV.createSfx(audio);
 
+    // Texts: English lives in data.js, other languages come from js/i18n.js
+    const tr = window.I18N.t;
+    const tx = window.I18N.tx;
+    const pickTx = (key, i, fallback) => { const v = tx(key); return v && v[i] ? v[i] : fallback; };
+    const wName = (id) => pickTx('svw.' + id, 0, W[id].name);
+    const wDesc = (id) => pickTx('svw.' + id, 1, W[id].desc);
+    const wUnit = (id, n) => {
+      const v = tx('svw.' + id);
+      if (v && v[2] != null) return n > 1 ? v[3] : v[2];
+      return W[id].unit + (n > 1 ? 's' : '');
+    };
+    const pName = (id) => pickTx('svp.' + id, 0, PS[id].name);
+    const pText = (id) => pickTx('svp.' + id, 1, PS[id].text);
+    const mName = (id) => pickTx('svm.' + id, 0, SV.META[id].name);
+    const mText = (id) => pickTx('svm.' + id, 1, SV.META[id].text);
+    const perks = (cat) => tx('svc.' + cat) || SV.CHARACTERS[cat].perks;
+    const eName = (type) => tx('sve.' + type) || EN[type].name;
+    const gf = () => !!(api.gfMode && api.gfMode());
+
     let mode = 'off';           // 'off' | 'lobby' | 'run'
     let S = null;               // run state
     const P = {
@@ -61,9 +80,9 @@
     // -------------------------------------------------------------------------
     // Persistent data
     // -------------------------------------------------------------------------
-    const getMeta = () => store.get('sv.meta', {});
-    const getBank = () => store.get('sv.coins', 0);
-    const getBest = () => store.get('sv.best', null);
+    const getMeta = () => store.get('svMeta', {});
+    const getBank = () => store.get('svCoins', 0);
+    const getBest = () => store.get('svBest', null);
 
     // -------------------------------------------------------------------------
     // Stats
@@ -295,13 +314,13 @@
         S.nextElite += rand(62, 80);
         const [x, y] = spawnRing(60);
         spawnEnemy(pickType(waveWeights()), x, y, { elite: true });
-        banner('A big one appeared! It carries a box 📦', 'elite');
+        banner(tr('sv.b.elite'), 'elite');
       }
 
       if (S.time >= S.nextBoss - 4 && !S.bossWarned) {
         S.bossWarned = true;
         const type = SV.BOSSES[S.bossIdx % SV.BOSSES.length];
-        banner('⚠ ' + EN[type].name + ' approaches!', 'boss');
+        banner(tr('sv.b.boss', { name: eName(type) }), 'boss');
         sfx.warning();
       }
       if (S.time >= S.nextBoss) {
@@ -325,12 +344,12 @@
       } else {
         const pool = Object.keys(waveWeights());
         ev = { kind: pick(['ring', 'stampede', 'swarm']), type: pick(pool), count: Math.round(rand(26, 40)) };
-        ev.text = { ring: 'Surrounded!', stampede: 'Stampede!', swarm: 'Here comes a swarm!' }[ev.kind];
+        ev.text = tr('sv.ev.' + ev.kind);
       }
       const next = SV.EVENTS[S.eventIdx];
       S.nextEvent = next ? next.at : S.time + rand(90, 130);
       const count = Math.round(ev.count * (1 + Math.min(S.time / 900, 1)));
-      banner(ev.text, 'event');
+      banner(ev.at != null ? (tx('svev.' + ev.at) || ev.text) : ev.text, 'event');
       if (ev.kind === 'ring') {
         // a closing circle with one gap to escape through
         const R = Math.max(cam.w, cam.h) * 0.58;
@@ -551,7 +570,7 @@
         shake(10);
         S.slowmo = 0.7;
         ring(e.x, e.y, 120, 'rgba(255,220,120,', 0.6, 6);
-        banner(d.name + ' defeated!', 'good');
+        banner(tr('sv.b.defeated', { name: eName(e.type) }), 'good');
       }
     }
 
@@ -689,13 +708,13 @@
         case 'can':
           for (const q of pickups) if (q.kind === 'xp' || q.kind === 'coin') q.vac = true;
           sfx.powerUp();
-          banner('Can opener! All treats come running 🥫', 'good');
+          banner(tr('sv.b.can'), 'good');
           break;
         case 'catnip':
           S.frenzy = 10;
           computeStats();
           sfx.powerUp();
-          banner('Catnip frenzy! 🌿', 'good');
+          banner(tr('sv.b.catnip'), 'good');
           break;
         case 'hiss':
           bigHiss();
@@ -787,6 +806,7 @@
     function hurtPlayer(dmg) {
       const d = Math.max(1, Math.round(dmg - S.st.armor));
       P.hp -= d;
+      if (gf()) P.hp = Math.max(1, P.hp);   // Girlfriend Mode: can't be caught
       P.iframe = IFRAME;
       S.hurtFlash = 0.35;
       shake(5);
@@ -802,7 +822,7 @@
         P.hp = S.st.maxHp * 0.6;
         P.iframe = 2.5;
         bigHiss();
-        banner('Nine lives! Back on your paws 💖', 'good');
+        banner(tr('sv.b.revive'), 'good');
         return;
       }
       P.hp = 0;
@@ -1300,43 +1320,42 @@
       return out;
     }
 
-    function describeUp(def, up) {
+    function describeUp(id, up) {
       const parts = [];
       if (up.amount) {
-        if (def === W.claw) parts.push('Also swipes behind you');
-        else parts.push('+' + up.amount + ' ' + def.unit + (up.amount > 1 ? 's' : ''));
+        if (id === 'claw') parts.push(tr('sv.up.behind'));
+        else parts.push('+' + up.amount + ' ' + wUnit(id, up.amount));
       }
-      if (up.dmg) parts.push('+' + up.dmg + ' damage');
-      if (up.area) parts.push('+' + Math.round(up.area * 100) + '% area');
-      if (up.cd) parts.push((def === W.hiss ? 'Faster pulses' : up.cd + 's cooldown'));
-      if (up.dur) parts.push('+' + up.dur + 's duration');
-      if (up.pierce) parts.push('+' + up.pierce + ' pierce');
-      if (up.spd) parts.push('+' + Math.round(up.spd * 100) + '% speed');
+      if (up.dmg) parts.push(tr('sv.up.dmg', { n: up.dmg }));
+      if (up.area) parts.push(tr('sv.up.area', { n: Math.round(up.area * 100) }));
+      if (up.cd) parts.push(id === 'hiss' ? tr('sv.up.pulse') : tr('sv.up.cd', { n: up.cd }));
+      if (up.dur) parts.push(tr('sv.up.dur', { n: up.dur }));
+      if (up.pierce) parts.push(tr('sv.up.pierce', { n: up.pierce }));
+      if (up.spd) parts.push(tr('sv.up.spd', { n: Math.round(up.spd * 100) }));
       return parts.join(', ');
     }
 
     function optionInfo(o) {
-      if (o.kind === 'heal') return { icon: '🐟', name: 'Sardine snack', tag: '', desc: 'Restore 30 health.', cls: 'misc' };
-      if (o.kind === 'coins') return { icon: '💰', name: 'Pocket change', tag: '', desc: '+15 fish coins.', cls: 'misc' };
+      if (o.kind === 'heal') return { icon: '🐟', name: tr('sv.snack'), tag: '', desc: tr('sv.snackDesc'), cls: 'misc' };
+      if (o.kind === 'coins') return { icon: '💰', name: tr('sv.change'), tag: '', desc: tr('sv.changeDesc'), cls: 'misc' };
       if (o.kind === 'weapon') {
         const d = W[o.id];
         const w = owns(o.id);
         let hint = '';
         if (d.evoWith) {
-          const pw = PS[d.evoWith];
-          hint = 'Evolves at Lv 8 with ' + pw.icon + ' ' + pw.name + (passive(d.evoWith) ? ' ✓' : '');
+          hint = tr('sv.evolvesWith', { icon: PS[d.evoWith].icon, name: pName(d.evoWith) }) + (passive(d.evoWith) ? ' ✓' : '');
         }
         return w
-          ? { icon: d.icon, name: d.name, tag: 'Lv ' + (w.level + 1), desc: describeUp(d, d.ups[w.level - 1]), hint, cls: 'weapon' }
-          : { icon: d.icon, name: d.name, tag: 'New!', desc: d.desc, hint, cls: 'weapon new' };
+          ? { icon: d.icon, name: wName(o.id), tag: tr('sv.lv', { n: w.level + 1 }), desc: describeUp(o.id, d.ups[w.level - 1]), hint, cls: 'weapon' }
+          : { icon: d.icon, name: wName(o.id), tag: tr('sv.new'), desc: wDesc(o.id), hint, cls: 'weapon new' };
       }
       const d = PS[o.id];
       const p = passive(o.id);
       const pair = Object.keys(W).find((id) => W[id].evoWith === o.id && owns(id));
-      const hint = pair ? 'Evolves ' + W[pair].icon + ' ' + W[pair].name : '';
+      const hint = pair ? tr('sv.evolves', { icon: W[pair].icon, name: wName(pair) }) : '';
       return p
-        ? { icon: d.icon, name: d.name, tag: 'Lv ' + (p.level + 1), desc: d.text, hint, cls: 'passive' }
-        : { icon: d.icon, name: d.name, tag: 'New!', desc: d.text, hint, cls: 'passive new' };
+        ? { icon: d.icon, name: pName(o.id), tag: tr('sv.lv', { n: p.level + 1 }), desc: pText(o.id), hint, cls: 'passive' }
+        : { icon: d.icon, name: pName(o.id), tag: tr('sv.new'), desc: pText(o.id), hint, cls: 'passive new' };
     }
 
     function applyOption(o) {
@@ -1365,7 +1384,7 @@
     }
 
     function renderCards() {
-      $('sv-lu-level').textContent = 'Level ' + (S.level - S.pendingLevels + 1);
+      $('sv-lu-level').textContent = tr('sv.level', { n: S.level - S.pendingLevels + 1 });
       const box = $('sv-cards');
       box.innerHTML = '';
       S.options.forEach((o, i) => {
@@ -1389,7 +1408,7 @@
       // ignore taps for a moment so a finger that was steering doesn't pick by accident
       setTimeout(() => box.querySelectorAll('.sv-card').forEach((b) => { b.disabled = false; }), 420);
       const rr = $('sv-reroll');
-      rr.textContent = 'Reroll (' + S.rerolls + ')';
+      rr.textContent = tr('sv.reroll', { n: S.rerolls });
       rr.disabled = S.rerolls <= 0;
     }
 
@@ -1425,7 +1444,7 @@
         if (evo) {
           const from = W[evo.id];
           evolve(evo);
-          loot.push({ icon: W[evo.id].icon, name: W[evo.id].name, desc: 'Evolved from ' + from.name + '!', cls: 'evo' });
+          loot.push({ icon: W[evo.id].icon, name: wName(evo.id), desc: tr('sv.evolvedFrom', { name: wName(W[evo.id].from) }), cls: 'evo' });
           continue;
         }
         const ups = [];
@@ -1438,13 +1457,13 @@
           loot.push({ icon: info.icon, name: info.name + ' ' + info.tag, desc: info.desc, cls: o.kind });
         } else {
           S.coins += 25;
-          loot.push({ icon: '💰', name: '+25 fish coins', desc: 'Everything is maxed out!', cls: 'misc' });
+          loot.push({ icon: '💰', name: tr('sv.maxedCoins'), desc: tr('sv.maxedDesc'), cls: 'misc' });
         }
       }
       computeStats();
       refreshSlots();
 
-      $('sv-chest-title').textContent = boss ? 'A big box!' : 'A cardboard box!';
+      $('sv-chest-title').textContent = tr(boss ? 'sv.bigBox' : 'sv.box');
       const box = $('sv-chest-box');
       box.className = 'sv-box shaking';
       const list = $('sv-loot');
@@ -1456,6 +1475,7 @@
         el.innerHTML = '<span class="sv-card-icon"></span><span class="sv-card-body"><span class="sv-card-name"></span><span class="sv-card-desc"></span></span>';
         el.querySelector('.sv-card-icon').textContent = l.icon;
         el.querySelector('.sv-card-name').textContent = l.name;
+        el.querySelector('.sv-card-name').dataset.evo = tr('sv.evolved');
         el.querySelector('.sv-card-desc').textContent = l.desc;
         list.appendChild(el);
       });
@@ -2120,7 +2140,7 @@
     function updateHud() {
       const pct = (S.xp / S.xpNext * 100).toFixed(1) + '%';
       if (hud.xp !== pct) { hud.xp = pct; $('sv-xp-fill').style.width = pct; }
-      setHud('sv-lv', 'Lv ' + S.level);
+      setHud('sv-lv', tr('sv.lv', { n: S.level }));
       setHud('sv-time', api.formatTime(S.time, false));
       setHud('sv-kills', String(S.kills));
       setHud('sv-coins', String(S.coins));
@@ -2129,7 +2149,7 @@
       if (hud.boss !== bossKey) {
         hud.boss = bossKey;
         $('sv-boss').classList.toggle('hidden', !b);
-        if (b) $('sv-boss-name').textContent = b.def.name;
+        if (b) $('sv-boss-name').textContent = eName(b.type);
       }
       if (b) {
         const f = (clamp(b.hp / b.maxHp, 0, 1) * 100).toFixed(1) + '%';
@@ -2184,17 +2204,17 @@
       $('sv-lobby-img').alt = cat.name;
       $('sv-lobby-name').textContent = cat.name;
       $('sv-lobby-perks').innerHTML = '';
-      for (const p of ch.perks) {
+      for (const p of perks(key)) {
         const li = document.createElement('li');
         li.textContent = p;
         $('sv-lobby-perks').appendChild(li);
       }
       const best = getBest();
       $('sv-records').innerHTML = best
-        ? '<div><span class="stat-val">' + api.formatTime(best.time, false) + '</span><span class="stat-label">Best time</span></div>' +
-          '<div><span class="stat-val">' + best.kills + '</span><span class="stat-label">Critters</span></div>' +
-          '<div><span class="stat-val">' + best.level + '</span><span class="stat-label">Level</span></div>'
-        : '<div class="sv-norecord">No hunts yet. How long can you last?</div>';
+        ? '<div><span class="stat-val">' + api.formatTime(best.time, false) + '</span><span class="stat-label">' + tr('sv.bestTime') + '</span></div>' +
+          '<div><span class="stat-val">' + best.kills + '</span><span class="stat-label">' + tr('sv.critters') + '</span></div>' +
+          '<div><span class="stat-val">' + best.level + '</span><span class="stat-label">' + tr('sv.lvl') + '</span></div>'
+        : '<div class="sv-norecord">' + tr('sv.noRecord') + '</div>';
       const bank = getBank();
       $('sv-bank').textContent = '💰 ' + bank;
       const meta = getMeta();
@@ -2211,9 +2231,9 @@
         for (let i = 0; i < m.max; i++) pips += '<i class="' + (i < lvl ? 'on' : '') + '"></i>';
         b.innerHTML = '<span class="sv-tree-icon">' + m.icon + '</span>' +
           '<span class="sv-tree-body"><span class="sv-tree-name"></span><span class="sv-tree-text"></span><span class="sv-pips">' + pips + '</span></span>' +
-          '<span class="sv-tree-cost">' + (maxed ? 'MAX' : '💰 ' + cost) + '</span>';
-        b.querySelector('.sv-tree-name').textContent = m.name;
-        b.querySelector('.sv-tree-text').textContent = m.text;
+          '<span class="sv-tree-cost">' + (maxed ? tr('sv.max') : '💰 ' + cost) + '</span>';
+        b.querySelector('.sv-tree-name').textContent = mName(id);
+        b.querySelector('.sv-tree-text').textContent = mText(id);
         b.addEventListener('click', () => {
           const bk = getBank();
           const mt = getMeta();
@@ -2221,8 +2241,8 @@
           const c = m.cost * (l + 1);
           if (l >= m.max || bk < c) return;
           mt[id] = l + 1;
-          store.set('sv.meta', mt);
-          store.set('sv.coins', bk - c);
+          store.set('svMeta', mt);
+          store.set('svCoins', bk - c);
           sfx.coin();
           renderLobby();
         });
@@ -2265,7 +2285,8 @@
       syncSoundBtn();
       api.setPlaylist(MUSIC);
       updateCamera(0);
-      banner('Survive the critters!', 'event');
+      banner(tr('sv.b.start'), 'event');
+      if (api.onRunChange) api.onRunChange();
     }
 
     function pause() {
@@ -2280,8 +2301,8 @@
         el.className = 'sv-build-item' + (d.evolved ? ' evo' : '');
         el.innerHTML = '<span class="sv-card-icon"></span><span class="sv-card-body"><span class="sv-card-name"></span><span class="sv-card-desc"></span></span>';
         el.querySelector('.sv-card-icon').textContent = d.icon;
-        el.querySelector('.sv-card-name').textContent = d.name + (d.evolved ? ' ★' : ' Lv ' + w.level);
-        el.querySelector('.sv-card-desc').textContent = d.evoWith && !d.evolved ? 'Evolves at Lv 8 with ' + PS[d.evoWith].icon + ' ' + PS[d.evoWith].name : d.desc;
+        el.querySelector('.sv-card-name').textContent = wName(w.id) + (d.evolved ? ' ★' : ' ' + tr('sv.lv', { n: w.level }));
+        el.querySelector('.sv-card-desc').textContent = d.evoWith && !d.evolved ? tr('sv.evolvesWith', { icon: PS[d.evoWith].icon, name: pName(d.evoWith) }) : wDesc(w.id);
         build.appendChild(el);
       }
       for (const p of S.passives) {
@@ -2290,19 +2311,19 @@
         el.className = 'sv-build-item passive';
         el.innerHTML = '<span class="sv-card-icon"></span><span class="sv-card-body"><span class="sv-card-name"></span><span class="sv-card-desc"></span></span>';
         el.querySelector('.sv-card-icon').textContent = d.icon;
-        el.querySelector('.sv-card-name').textContent = d.name + ' Lv ' + p.level;
-        el.querySelector('.sv-card-desc').textContent = d.text;
+        el.querySelector('.sv-card-name').textContent = pName(p.id) + ' ' + tr('sv.lv', { n: p.level });
+        el.querySelector('.sv-card-desc').textContent = pText(p.id);
         build.appendChild(el);
       }
       const st = S.st;
       const pct = (v) => (v >= 0 ? '+' : '') + Math.round(v * 100) + '%';
       const rows = [
-        ['Health', Math.ceil(P.hp) + ' / ' + Math.round(st.maxHp)], ['Damage', pct(st.might - 1)], ['Armor', st.armor],
-        ['Speed', pct(st.speed - 1)], ['Cooldown', pct(st.cooldown - 1)], ['Area', pct(st.area - 1)],
-        ['Pickup range', pct(st.magnet - 1)], ['Luck', pct(st.luck)], ['Regen', st.regen.toFixed(1) + '/s'],
-        ['Rerolls', S.rerolls], ['Revives', S.revives],
+        ['health', Math.ceil(P.hp) + ' / ' + Math.round(st.maxHp)], ['damage', pct(st.might - 1)], ['armor', st.armor],
+        ['speed', pct(st.speed - 1)], ['cooldown', pct(st.cooldown - 1)], ['area', pct(st.area - 1)],
+        ['magnet', pct(st.magnet - 1)], ['luck', pct(st.luck)], ['regen', st.regen.toFixed(1) + '/s'],
+        ['rerolls', S.rerolls], ['revives', S.revives],
       ];
-      $('sv-stats').innerHTML = rows.map(([k, v]) => '<div><span>' + k + '</span><b>' + v + '</b></div>').join('');
+      $('sv-stats').innerHTML = rows.map(([k, v]) => '<div><span>' + tr('sv.st.' + k) + '</span><b>' + v + '</b></div>').join('');
       showSv('sv-pause');
     }
 
@@ -2314,44 +2335,52 @@
 
     function showResults() {
       S.resultsShown = true;
+      // Girlfriend Mode runs are just for fun: nothing is banked or recorded
+      const counts = !gf();
       const earned = Math.round((S.coins + Math.floor(S.time / 20)) * S.st.greed);
-      store.set('sv.coins', getBank() + earned);
+      if (counts) store.set('svCoins', getBank() + earned);
       const best = getBest();
-      const isBest = !best || S.time > best.time;
-      if (isBest) store.set('sv.best', { time: S.time, kills: S.kills, level: S.level, cat: S.cat });
+      const isBest = counts && (!best || S.time > best.time);
+      if (isBest) store.set('svBest', { time: Math.round(S.time * 10) / 10, kills: S.kills, level: S.level, cat: S.cat, at: Date.now() });
       const cat = api.CATS[S.cat];
       $('sv-over-img').src = cat.dir + cat.prefix + 'sitting.png';
-      $('sv-over-title').textContent = S.time >= 900 ? 'Legendary hunt!' : S.time >= 600 ? 'What a hunt!' : S.time >= 300 ? 'Good hunt!' : 'Caught by critters';
+      $('sv-over-title').textContent = tr(S.time >= 900 ? 'sv.r.legendary' : S.time >= 600 ? 'sv.r.great' : S.time >= 300 ? 'sv.r.good' : 'sv.r.caught');
       $('sv-o-time').textContent = api.formatTime(S.time, false);
       $('sv-o-level').textContent = S.level;
       $('sv-o-kills').textContent = S.kills;
-      $('sv-o-coins').textContent = '+' + earned + ' 💰 fish coins' + (S.st.greed > 1 ? ' (incl. Piggy Bank bonus)' : '');
-      $('sv-o-best').textContent = isBest ? 'New best time!' : 'Best: ' + api.formatTime(best.time, false);
+      $('sv-o-coins').textContent = counts ? tr('sv.r.earned', { n: earned }) + (S.st.greed > 1 ? tr('sv.r.greed') : '') : tr('gf.notSaved');
+      $('sv-o-best').textContent = isBest ? tr('win.newBest') : best ? tr('sv.r.best', { v: api.formatTime(best.time, false) }) : '';
       const entries = Object.entries(S.dmgBy).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
       const top = entries.length ? entries[0][1] : 1;
       $('sv-o-dmg').innerHTML = entries.map(([id, v]) => {
         const d = W[id];
         const icon = d ? d.icon : '🙀';
-        const name = d ? d.name : 'Big Hiss';
+        const name = d ? wName(id) : tr('sv.bigHiss');
         return '<div class="sv-dmg-row"><span class="sv-dmg-icon">' + icon + '</span><span class="sv-dmg-name">' + name +
           '</span><span class="sv-dmg-bar"><i style="width:' + (v / top * 100).toFixed(1) + '%"></i></span><b>' + Math.round(v).toLocaleString() + '</b></div>';
       }).join('');
       showSv('sv-over');
     }
 
-    function exit() {
+    // Leave the mode without telling the menu (it handles the next screen itself)
+    function quit() {
       mode = 'off';
       S = null;
       joy = null;
       showSv(null);
       $('sv-hud').classList.add('hidden');
+      if (api.onRunChange) api.onRunChange();
+    }
+
+    function exit() {
+      quit();
       api.toLevels();
     }
 
     function refreshCard() {
       const best = getBest();
       const el = $('best-sv');
-      if (el) el.textContent = best ? 'Best: ' + api.formatTime(best.time, false) : 'Not played yet';
+      if (el) el.textContent = best ? tr('level.best', { v: api.formatTime(best.time, false) }) : tr('level.notPlayed');
     }
 
     function syncSoundBtn() {
@@ -2457,7 +2486,7 @@
         cam.x = P.x - cam.w / 2;
         cam.y = P.y - cam.h * 0.62;
       } else if (mode === 'run' && S) {
-        if (!S.paused && !S.modal) {
+        if (!S.paused && !S.modal && !(api.blocked && api.blocked())) {
           let scale = 1;
           if (S.slowmo > 0) { S.slowmo -= dt; scale = 0.35; }
           let t = dt * scale;
@@ -2477,9 +2506,18 @@
 
     return {
       get active() { return mode !== 'off'; },
+      get running() { return mode === 'run' && !!S && !S.over; },
       frame,
       openLobby,
       refreshCard,
+      quit,
+      pause,
+      syncSound: syncSoundBtn,
+      onLanguage() {
+        if (mode === 'lobby') renderLobby();
+        if (S && S.modal === 'levelup') renderCards();
+        if (S) { for (const k in hud) delete hud[k]; }
+      },
       debug: {
         prof, keys, rollOptions, chooseOption, closeChest: () => $('sv-chest-ok').click(),
         tick(dt) { update(dt); updateCamera(dt); },

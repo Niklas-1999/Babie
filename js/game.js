@@ -52,6 +52,7 @@
   // Helpers
   // ---------------------------------------------------------------------------
   const $ = (id) => document.getElementById(id);
+  const tr = window.I18N.t;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -141,7 +142,10 @@
     handle.jetY = handle.y - 70;
     plats.push(handle);
 
-    return { id: 1, theme: 'door', width: W, viewW: W, viewH: MIN_VIEW_H, plats, goal: handle, topY: y - 320, spawnX: W / 2, jetX: W / 2 + 110, decor: [] };
+    return {
+      id: 1, theme: 'door', width: W, plats, goal: handle, topY: y - 320, spawnX: W / 2, jetX: W / 2 + 110, decor: [],
+      views: { portrait: { viewW: W, viewH: MIN_VIEW_H }, landscape: { viewW: W, viewH: 520 } },
+    };
   }
 
   // Level 2 (landscape): hop across the kitchen, bottom left to top right, to the cat food.
@@ -208,7 +212,8 @@
     floor.w = width + 1200;
     const level = {
       id: 2, theme: 'kitchen', width, plats, goal: can, topY: y - 260,
-      spawnX: 90, jetX: 220, landscape: true, viewW: 640, viewH: 400,
+      spawnX: 90, jetX: 220, landscape: true,
+      views: { landscape: { viewW: 640, viewH: 400 }, portrait: { viewW: 400, viewH: 520 } },
     };
 
     // Trampolines launch to the platform TRAMP_SKIP ahead; keep only the ones that really land there.
@@ -262,7 +267,7 @@
       { type: 'umbrella', w: 100, h: 128 }, { type: 'umbrella', w: 100, h: 128 },
       { type: 'kiosk', w: 180, h: 168 }, { type: 'shop', w: 270, h: 200 }, { type: 'shop', w: 270, h: 200 },
     ];
-    const SHOP_NAMES = ['CAFÉ', 'BAKERY', 'PET SHOP', 'FLOWERS', 'BOOKS', 'DELI', 'ICE CREAM'];
+    const SHOP_NAMES = tr('world.shops');
     let x = 460;
     while (x < forestX - 360) {
       const t = PROPS[Math.floor(rnd() * PROPS.length)];
@@ -302,24 +307,29 @@
 
     return {
       id: 3, theme: 'street', width, plats, goal, topY: -480, spawnX: 140, jetX: 290,
-      landscape: true, viewW: 640, viewH: 400, cars: true, houses, clouds, trees,
+      landscape: true, cars: true, houses, clouds, trees,
+      views: { landscape: { viewW: 640, viewH: 400 }, portrait: { viewW: 420, viewH: 400 } },
     };
   }
 
   // Level 4 (landscape): on the vet's exam table. Survive 2 minutes of falling syringes.
   const SURVIVE_TIME = 120;
 
+  // The table is narrower in portrait so the cat stays big enough.
   function buildVetLevel() {
-    const width = 640;
+    const portrait = orientation === 'portrait';
+    const width = portrait ? 420 : 640;
     const plats = [
       { kind: 'floor', x: -600, y: 0, w: width + 1200, h: 800 },
-      { kind: 'prop', type: 'towels', x: 118, y: -46, w: 88, h: 46 },
-      { kind: 'prop', type: 'scale', x: 420, y: -30, w: 112, h: 30 },
+      { kind: 'prop', type: 'towels', x: portrait ? 50 : 118, y: -46, w: 88, h: 46 },
+      { kind: 'prop', type: 'scale', x: portrait ? 270 : 420, y: -30, w: 112, h: 30 },
     ];
+    const view = { viewW: width, viewH: 400 };
     return {
       id: 4, theme: 'vet', width, plats, topY: -330, spawnX: width / 2, jetX: null,
       goal: { kind: 'survive', x: width / 2 - 20, y: -100, w: 40, h: 0 },
-      landscape: true, viewW: width, viewH: 400, staticCam: true, ceilY: -300,
+      landscape: true, staticCam: true, ceilY: -300, builtFor: orientation,
+      views: { portrait: view, landscape: view },
       survive: SURVIVE_TIME, needles: true,
     };
   }
@@ -355,19 +365,29 @@
     return null;
   }
 
+  // Texts come from js/i18n.js: level.<id>.name / .win / .lose / .intro
   const LEVELS = {
-    1: { name: 'Open the Door', build: buildDoorLevel, winTitle: 'Door opened!', loseText: 'The door stays shut… for now.',
-      music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'] },
-    2: { name: 'Kitchen Raid', build: buildKitchenLevel, winTitle: 'Dinner time!', loseText: 'The can stays closed… for now.',
-      music: ['Bouncy Banjo Run.mp3', 'Bouncy Banjo Run2.mp3'] },
-    3: { name: 'Street Dash', build: buildStreetLevel, winTitle: 'Into the forest!', loseText: 'Too much traffic… try again.',
-      music: ['Jaunty Guitar Motif.mp3', 'Jaunty Guitar Motif2.mp3'], intro: 'Jump over the cars!' },
+    1: { build: buildDoorLevel, music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'] },
+    2: { build: buildKitchenLevel, music: ['Bouncy Banjo Run.mp3', 'Bouncy Banjo Run2.mp3'] },
+    3: { build: buildStreetLevel, music: ['Jaunty Guitar Motif.mp3', 'Jaunty Guitar Motif2.mp3'], intro: true },
     // TODO: own music and hit sound once they're in assets/sounds
-    4: { name: 'Vet Visit', build: buildVetLevel, winTitle: 'Survived the vet!', loseText: 'The vet got you… try again.',
-      music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'], intro: 'Dodge the needles for 2 minutes!', survival: true },
+    4: { build: buildVetLevel, music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'], intro: true, survival: true },
   };
+  const STORY_LEVELS = [1, 2, 3, 4];
+  const MENU_MUSIC = LEVELS[1].music;
+
+  // Device settings
+  let orientation = store.get('orient', 'portrait');   // every game is played in this orientation
+
+  function applyView() {
+    const v = level.views[orientation] || level.views.portrait;
+    level.viewW = v.viewW;
+    level.viewH = v.viewH;
+  }
 
   let level = buildDoorLevel();
+  applyView();
+  level.coins = [];
 
   // ---------------------------------------------------------------------------
   // Canvas / view
@@ -399,11 +419,12 @@
 
   function checkOrientation() {
     const portrait = window.innerHeight >= window.innerWidth;
-    const want = level.landscape ? 'landscape' : 'portrait';
-    wrongOrientation = isTouch && game.running && !game.wonAt && !game.over && portrait !== (want === 'portrait');
+    const want = orientation;
+    const playing = (game.running && !game.wonAt && !game.over) || (survivor && survivor.running);
+    wrongOrientation = isTouch && playing && portrait !== (want === 'portrait');
     const el = $('rotate');
     el.classList.toggle('hidden', !wrongOrientation);
-    $('rotate-text').textContent = 'Turn your phone ' + (want === 'landscape' ? 'sideways' : 'upright');
+    $('rotate-text').textContent = tr(want === 'landscape' ? 'rotate.landscape' : 'rotate.portrait');
     el.classList.toggle('to-landscape', want === 'landscape');
     if (wrongOrientation) aim.active = false;
   }
@@ -435,7 +456,7 @@
     if (isFullscreen()) { exitFullscreen(); return; }
     autoFullscreen = false;
     enterFullscreen().then(() => {
-      if (game.running) lockOrientation(level.landscape ? 'landscape' : 'portrait');
+      if (game.running || (survivor && survivor.active)) lockOrientation(orientation);
     }).catch(() => {});
   }
 
@@ -454,7 +475,7 @@
     const so = screen.orientation;
     const lock = () => { if (so && so.lock) so.lock(want).catch(() => {}); };
     if (isFullscreen()) { lock(); return; }
-    if (want === 'landscape' && fsSupported) {
+    if (want === 'landscape' && fsSupported && !isFullscreen()) {
       enterFullscreen().then(() => { autoFullscreen = true; lock(); }).catch(() => {});
     }
   }
@@ -478,23 +499,6 @@
       img.onerror = () => { console.warn('Could not load', src); resolve(null); };
       img.src = src;
     });
-  }
-
-  async function loadSprites() {
-    const jobs = [];
-    for (const [key, cat] of Object.entries(CATS)) {
-      sprites[key] = {};
-      for (const pose of POSE_FILES) {
-        jobs.push(loadImage(cat.dir + cat.prefix + pose + '.png').then((img) => { sprites[key][pose] = img; }));
-      }
-    }
-    await Promise.all(jobs);
-    for (const key of Object.keys(CATS)) {
-      const ref = sprites[key].idle;
-      sprites[key].scale = ref ? SPRITE_H / ref.height : 0.25;
-      const hit = sprites[key].hit;
-      sprites[key].hitScale = hit ? HIT_W / hit.width : sprites[key].scale;
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -664,6 +668,8 @@
     needles: [],
     needleTimer: 0,
     hits: 0,
+    coins: 0,        // coins picked up this run
+    mode: 'mini',    // 'mini' (any level) or 'story'
   };
 
   const player = {
@@ -677,7 +683,9 @@
 
   const aim = { active: false, id: null, sx: 0, sy: 0, cx: 0, cy: 0, power: 0, angle: 0 };
   const particles = [];
+  const floaters = [];   // "+1" coin popups
   let accumulator = 0;
+  let survivor = null;   // Backyard Survivors, created at boot
   let directAim = !!store.get('directAim', false);
   let gfMode = !!store.get('gfMode', false); // infinite lives
 
@@ -692,11 +700,16 @@
     setState('waiting');
   }
 
-  function startGame(catKey, levelId, fromSave) {
+  function startGame(catKey, levelId, fromSave, mode) {
     game.catKey = catKey;
     store.set('cat', catKey);
     level = LEVELS[levelId].build();
+    applyView();
+    level.coins = makeCoins(level);
     game.levelId = levelId;
+    game.mode = mode || (fromSave && fromSave.mode) || 'mini';
+    game.coins = 0;
+    game.coinTimer = 4;
     game.running = true;
     game.paused = false;
     game.wonAt = 0;
@@ -723,6 +736,8 @@
       game.jumps = fromSave.jumps || 0;
       game.falls = fromSave.falls || 0;
       game.lives = fromSave.lives || MAX_LIVES;
+      game.coins = fromSave.coins || 0;
+      for (const i of fromSave.taken || []) if (level.coins[i]) level.coins[i].taken = true;
       const cp = level.plats[fromSave.checkpoint];
       if (cp && cp.kind === 'shelf') game.checkpoint = cp;
       const pl = level.plats[fromSave.plat];
@@ -734,18 +749,19 @@
       }
     } else {
       game.time = 0; game.jumps = 0; game.falls = 0;
-      store.del('save');
+      Profile.set('save', null);
     }
 
+    setMenuChrome(null);
     resize();
-    lockOrientation(level.landscape ? 'landscape' : 'portrait');
+    lockOrientation(orientation);
     cam.x = player.x - view.viewW * 0.35;
     cam.y = player.y - view.viewH * 0.62;
     clampCamera();
     showScreen(null);
     checkOrientation();
     setPlaylist(LEVELS[levelId].music);
-    if (LEVELS[levelId].intro && !fromSave) showToast(LEVELS[levelId].intro);
+    if (LEVELS[levelId].intro && !fromSave) showToast(tr('level.' + levelId + '.intro'));
     $('hud').classList.remove('hidden');
     $('hint').classList.toggle('hidden', game.jumps >= 2);
     $('hint').classList.remove('fade');
@@ -756,11 +772,13 @@
     if (!game.running || game.wonAt || !player.grounded || !player.on) return;
     if (level.survive) return;   // survival rounds always start fresh
     const idx = level.plats.indexOf(player.on);
-    store.set('save', {
+    const taken = [];
+    level.coins.forEach((c, i) => { if (c.taken) taken.push(i); });
+    Profile.set('save', {
       cat: game.catKey, level: game.levelId, plat: idx, rel: player.x - player.on.x,
       time: game.time, jumps: game.jumps, falls: game.falls,
       lives: game.lives, checkpoint: game.checkpoint ? level.plats.indexOf(game.checkpoint) : -1,
-      progress: progress(),
+      progress: progress(), mode: game.mode, coins: game.coins, taken,
     });
   }
 
@@ -896,6 +914,7 @@
 
     const p = player;
     if (game.wonAt || game.over) return;
+    updateCoins(dt);
     if (level.survive && game.time >= level.survive && p.grounded && p.state !== 'hit') { surviveWin(); return; }
     if (game.jet) { updateJet(dt); return; }
     if (touchesJetpack()) { startJet(); return; }
@@ -1056,7 +1075,7 @@
 
   function spawnNeedle(x, t, extraDelay) {
     x = clamp(x, 26, level.width - 26);
-    const startY = cam.y + 178;          // tip position while it hangs at the top (below the HUD)
+    const startY = Math.max(cam.y + 178, level.ceilY);   // tip position while it hangs at the top (below the HUD)
     const impactY = surfaceBelow(x);
     const speed = lerp(330, 560, t);
     const delay = lerp(1.15, 0.62, t) + extraDelay;
@@ -1143,6 +1162,127 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Collectible coins (saved to the player's account, for the casino later)
+  // ---------------------------------------------------------------------------
+  const COIN_R = 9;
+
+  // Coins sit above some platforms; the layout is seeded so it's the same every time.
+  function makeCoins(lvl) {
+    const coins = [];
+    if (lvl.needles) return coins;   // the vet level spawns them over time instead
+    const rnd = mulberry32(777 + lvl.id * 31);
+    const chance = lvl.theme === 'street' ? 0.55 : 0.32;
+    for (const p of lvl.plats) {
+      if (p === lvl.goal || p.kind === 'floor' || p.kind === 'can' || p.kind === 'handle') continue;
+      if (p.kind === 'prop' && p.type === 'awning') continue;
+      if (rnd() > chance) continue;
+      const off = p.w * (0.3 + rnd() * 0.4);
+      const c = { x: p.x + off, y: p.y - 24, taken: false, phase: rnd() * 6 };
+      if (p.kind === 'moving') { c.plat = p; c.off = off; }
+      coins.push(c);
+      // a little trail of coins on wide surfaces
+      if (p.w > 160 && rnd() < 0.5) {
+        for (const dx of [-26, 26]) {
+          const cx = c.x + dx;
+          if (cx > p.x + 8 && cx < p.x + p.w - 8) coins.push({ x: cx, y: c.y, taken: false, phase: c.phase + dx / 20 });
+        }
+      }
+    }
+    if (lvl.theme === 'street') {
+      // some floating ones above the road, to grab mid-jump
+      for (let x = 700; x < lvl.goal.x - 300; x += 500 + rnd() * 500) coins.push({ x, y: -110 - rnd() * 60, taken: false, phase: rnd() * 6 });
+    }
+    return coins;
+  }
+
+  function coinPos(c) {
+    return c.plat ? c.plat.x + c.off : c.x;
+  }
+
+  function updateCoins(dt) {
+    const p = player;
+    if (level.needles && !game.wonAt && game.time < level.survive) {
+      game.coinTimer -= dt;
+      if (game.coinTimer <= 0) {
+        game.coinTimer = 6 + Math.random() * 5;
+        const x = 30 + Math.random() * (level.width - 60);
+        level.coins.push({ x, y: surfaceBelow(x) - 24, taken: false, phase: 0, life: 7 });
+      }
+      for (const c of level.coins) if (c.life != null && !c.taken) { c.life -= dt; if (c.life <= 0) c.taken = true; }
+    }
+    for (const c of level.coins) {
+      if (c.taken) continue;
+      const cx = coinPos(c);
+      if (Math.abs(cx - p.x) < HW + COIN_R && c.y > p.y - PH - COIN_R && c.y < p.y + COIN_R) collectCoin(c, cx);
+    }
+  }
+
+  function collectCoin(c, cx) {
+    c.taken = true;
+    game.coins++;
+    if (!gfMode) Profile.addCoins(1);   // Girlfriend Mode is just for fun: nothing is kept
+    if (uiSfx) uiSfx.coin();
+    floaters.push({ x: cx, y: c.y - 10, t: 0, text: '+1' });
+    for (let i = 0; i < 8; i++) {
+      const a = Math.random() * Math.PI * 2;
+      particles.push({
+        x: cx, y: c.y, vx: Math.cos(a) * 110, vy: Math.sin(a) * 110,
+        life: 0.4, t: 0, r: 2 + Math.random() * 2, color: 'rgba(255,215,80,', grav: 0,
+      });
+    }
+  }
+
+  function drawCoins() {
+    const top = cam.y - 30, bottom = cam.y + view.viewH + 30;
+    const left = cam.x - 30, right = cam.x + view.viewW + 30;
+    for (const c of level.coins) {
+      if (c.taken) continue;
+      const x = coinPos(c);
+      const y = c.y + Math.sin(game.clock * 3 + c.phase) * 3;
+      if (x < left || x > right || y < top || y > bottom) continue;
+      if (c.life != null && c.life < 2 && Math.floor(c.life * 8) % 2 === 0) continue;
+      const spin = Math.cos(game.clock * 3.2 + c.phase);
+      const w = Math.max(0.12, Math.abs(spin));
+      const g = ctx.createRadialGradient(x, y, 2, x, y, 20);
+      g.addColorStop(0, 'rgba(255, 220, 100, 0.45)');
+      g.addColorStop(1, 'rgba(255, 220, 100, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.fill();
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(w, 1);
+      ctx.fillStyle = '#b8860b';
+      ctx.beginPath(); ctx.arc(0, 0, COIN_R, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = spin > 0 ? '#ffd34d' : '#f2b929';
+      ctx.beginPath(); ctx.arc(0, 0, COIN_R - 1.6, 0, Math.PI * 2); ctx.fill();
+      if (w > 0.45) {
+        // paw print
+        ctx.fillStyle = 'rgba(160, 100, 0, 0.75)';
+        ctx.beginPath(); ctx.ellipse(0, 2, 3, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+        for (const [dx, dy] of [[-3.4, -2], [-1.2, -4], [1.2, -4], [3.4, -2]]) {
+          ctx.beginPath(); ctx.arc(dx, dy, 1.1, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillRect(-COIN_R * 0.45, -COIN_R * 0.55, 2, 3);
+      ctx.restore();
+    }
+    // "+1" popups
+    ctx.font = '700 12px Fredoka, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const f of floaters) {
+      ctx.globalAlpha = Math.max(0, 1 - f.t / 0.8);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(60, 35, 0, 0.7)';
+      ctx.strokeText(f.text, f.x, f.y - f.t * 30);
+      ctx.fillStyle = '#ffe28a';
+      ctx.fillText(f.text, f.x, f.y - f.t * 30);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------------------------------------------------------------------------
   // Jetpack (Girlfriend Mode only): flies the cat straight to the door handle
   // ---------------------------------------------------------------------------
   function jetpackAvailable() {
@@ -1167,7 +1307,7 @@
     $('hint').classList.add('fade');
     setState('jump');
     playSfx('jump');
-    showToast('Jetpack! \u2191');
+    showToast(tr('hud.jetpack'));
   }
 
   function updateJet(dt) {
@@ -1286,12 +1426,12 @@
   function gameOver() {
     game.over = true;
     aim.active = false;
-    store.del('save');
+    Profile.set('save', null);
     setTimeout(() => {
       $('over-progress').textContent = Math.round(progress() * 100) + '%';
       $('over-time').textContent = formatTime(game.time, false);
-      $('over-jumps').textContent = game.jumps;
-      $('over-sub').textContent = LEVELS[game.levelId].loseText;
+      $('over-coins').textContent = game.coins;
+      $('over-sub').textContent = tr('level.' + game.levelId + '.lose');
       $('hud').classList.add('hidden');
       showScreen('over');
     }, 700);
@@ -1323,7 +1463,7 @@
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) { /* ignore */ } }
     if (pl.kind === 'shelf' && (!game.checkpoint || pl.y < game.checkpoint.y)) {
       game.checkpoint = pl;
-      showToast('Checkpoint ' + pl.label.replace(/ /g, ''));
+      showToast(tr('hud.checkpoint', { n: pl.label.replace(/ /g, '') }));
     }
     if (pl.kind === 'breakable' && !pl.cracking) { pl.cracking = true; pl.crackT = 0; }
     if (wasHit) {
@@ -1418,6 +1558,10 @@
   }
 
   function updateParticles(dt) {
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      floaters[i].t += dt;
+      if (floaters[i].t > 0.8) floaters.splice(i, 1);
+    }
     for (let i = particles.length - 1; i >= 0; i--) {
       const q = particles[i];
       q.t += dt;
@@ -1433,24 +1577,39 @@
   // ---------------------------------------------------------------------------
   // Win
   // ---------------------------------------------------------------------------
-  function bestKey(id) { return id === 1 ? 'best' : 'best' + id; }
-  function hitsText(n) { return n + (n === 1 ? ' hit' : ' hits'); }
+  function bestKey(id) { return 'best' + id; }
+  function hitsText(n) { return n === 1 ? tr('hud.hit') : tr('hud.hits', { n }); }
 
   function win() {
     game.wonAt = game.clock;
     setState('won');
     aim.active = false;
-    store.del('save');
+    Profile.set('save', null);
     $('hint').classList.add('fade');
     if (level.survive) spawnConfetti(player.x, player.y - 60);
     else spawnConfetti(level.goal.x + level.goal.w / 2, level.goal.y);
     if (navigator.vibrate) { try { navigator.vibrate([30, 60, 30]); } catch (e) { /* ignore */ } }
 
     const key = bestKey(game.levelId);
-    const best = store.get(key, null);
-    // survival rounds are ranked by fewest hits, the others by time
-    const isBest = !best || (level.survive ? game.hits < best.hits : game.time < best.time);
-    if (isBest) store.set(key, { time: game.time, cat: game.catKey, jumps: game.jumps, hits: game.hits });
+    const best = Profile.get(key, null);
+    // survival rounds are ranked by fewest hits (then time), the others by time
+    const rec = { time: Math.round(game.time * 100) / 100, cat: game.catKey, jumps: game.jumps, hits: game.hits, at: Date.now() };
+    if (level.survive) rec.score = Profile.scoreVet(rec);
+    // Girlfriend Mode runs don't count: no records, no story progress
+    const counts = !gfMode;
+    const isBest = counts && (!best || (level.survive ? rec.score < (best.score != null ? best.score : Profile.scoreVet(best)) : game.time < best.time));
+    if (isBest) Profile.set(key, rec);
+
+    // story: beating the next level unlocks the one after it
+    let unlocked = false;
+    if (counts && game.mode === 'story') {
+      const story = Object.assign({ mallow: 0, mischko: 0 }, Profile.get('story', {}));
+      if ((story[game.catKey] || 0) < game.levelId) {
+        story[game.catKey] = game.levelId;
+        Profile.set('story', story);
+        unlocked = game.levelId < STORY_LEVELS.length;
+      }
+    }
 
     setTimeout(() => {
       $('win-img').src = CATS[game.catKey].dir + CATS[game.catKey].prefix + 'sitting.png';
@@ -1459,11 +1618,17 @@
       $('win-jumps').textContent = game.jumps;
       const showHits = level.cars || level.needles;
       $('win-falls').textContent = showHits ? game.hits : game.falls;
-      $('win-falls-label').textContent = showHits ? 'Hits' : 'Big falls';
-      const b = store.get(key, null);
-      $('win-title').textContent = LEVELS[game.levelId].winTitle;
-      if (level.survive) $('win-best').textContent = isBest ? 'New record!' : (b ? 'Best: ' + hitsText(b.hits) : '');
-      else $('win-best').textContent = isBest ? 'New best time!' : (b ? 'Best: ' + formatTime(b.time) : '');
+      $('win-falls-label').textContent = tr(showHits ? 'win.hits' : 'win.falls');
+      $('win-coins').textContent = game.coins;
+      const b = Profile.get(key, null);
+      $('win-title').textContent = tr('level.' + game.levelId + '.win');
+      if (level.survive) $('win-best').textContent = isBest ? tr('win.newRecord') : (b ? tr('level.best', { v: hitsText(b.hits) }) : '');
+      else $('win-best').textContent = isBest ? tr('win.newBest') : (b ? tr('level.best', { v: formatTime(b.time) }) : '');
+      if (!counts) $('win-best').textContent = tr('gf.notSaved');
+      const story = game.mode === 'story';
+      $('win-unlock').classList.toggle('hidden', !unlocked);
+      $('btn-next').classList.toggle('hidden', !story || game.levelId >= STORY_LEVELS.length);
+      $('btn-win-menu').textContent = tr(story ? 'story.title' : 'pause.levels');
       $('hud').classList.add('hidden');
       checkOrientation();
       showScreen('win');
@@ -1477,7 +1642,7 @@
     if (level.staticCam) {
       // one fixed shot: the whole table, table top near the bottom
       cam.x = (level.width - view.viewW) / 2;
-      cam.y = -view.viewH * 0.8;
+      cam.y = -view.viewH * (view.viewH > 520 ? 0.66 : 0.8);
       return;
     }
     const maxY = 90 - view.viewH;          // don't show much below the floor
@@ -1754,7 +1919,7 @@
       ctx.font = '700 14px Fredoka, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('FOREST \u2192', fx, -113);
+      ctx.fillText(tr('world.forest'), fx, -113);
     }
   }
 
@@ -2013,7 +2178,8 @@
     ctx.fillRect(366, -302, 6, 18);
     ctx.fillRect(360, -296, 18, 6);
 
-    // cabinet with jars
+    // cabinet with jars (only on the wide landscape table)
+    if (level.width < 600) return;
     roundRect(450, -320, 160, 150, 8);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
@@ -2530,7 +2696,7 @@
     const tx = ex + dx * 26, ty = ey + dy * 26;
     ctx.lineWidth = 4;
     ctx.strokeStyle = 'rgba(20, 10, 30, 0.6)';
-    const label = ok ? Math.round(aim.power * 100) + '%' : 'cancel';
+    const label = ok ? Math.round(aim.power * 100) + '%' : tr('hud.cancel');
     ctx.strokeText(label, tx, ty);
     ctx.fillStyle = '#fff';
     ctx.fillText(label, tx, ty);
@@ -2596,6 +2762,7 @@
       if (p.y + p.h < top || p.y - 40 > bottom || p.x > right || p.x + p.w < left) continue;
       drawPlatform(p);
     }
+    drawCoins();
     if (level.cars) for (const c of game.cars) drawCar(c);
     if (level.needles) for (const n of game.needles) drawImpact(n);
     if (game.running) {
@@ -2635,19 +2802,22 @@
     setText('hud-progress-text', pct + '%');
     const w = pct + '%';
     if (hudCache.bar !== w) { hudCache.bar = w; $('hud-progress').style.width = w; }
-    setText('hud-jumps', game.jumps + (game.jumps === 1 ? ' jump' : ' jumps') +
-      (game.hits ? ' · ' + hitsText(game.hits) : game.falls ? ' · ' + game.falls + (game.falls === 1 ? ' big fall' : ' big falls') : ''));
+    setText('hud-coins', String(game.coins));
+    setText('hud-jumps', (game.jumps === 1 ? tr('hud.jump') : tr('hud.jumps', { n: game.jumps })) +
+      (game.hits ? ' · ' + hitsText(game.hits) : game.falls ? ' · ' + (game.falls === 1 ? tr('hud.fall') : tr('hud.falls', { n: game.falls })) : ''));
   }
 
   // ---------------------------------------------------------------------------
   // Main loop
   // ---------------------------------------------------------------------------
   let last = performance.now();
+  let menuOpen = false;   // the menu backdrop covers the canvas, no need to draw it
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
 
     syncAudioPause();
+    updateGear();
     if (survivor && survivor.active) {
       survivor.frame(dt);
       requestAnimationFrame(frame);
@@ -2666,7 +2836,8 @@
       updateCamera(dt);
       updateHud(false);
     } else if (!game.running) {
-      // menu backdrop: slowly pan through the level
+      if (menuOpen) { requestAnimationFrame(frame); return; }
+      // backdrop behind panels: slowly pan through the level
       game.clock += dt;
       updatePlatforms(dt);
       const f = ((game.clock * 40) % (-level.topY)) / -level.topY;
@@ -2680,13 +2851,58 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Screens & UI wiring
+  // Screens
   // ---------------------------------------------------------------------------
-  const screens = ['menu', 'levels', 'pause', 'win', 'over'];
+  const screens = ['title', 'hub', 'levels', 'cats', 'story', 'leaderboard', 'pause', 'win', 'over'];
+  const MENU_SCREENS = ['title', 'hub', 'levels', 'cats', 'story', 'leaderboard'];
+  let currentScreen = null;
+
   function showScreen(name) {
+    currentScreen = name;
     for (const s of screens) $(s).classList.toggle('hidden', s !== name);
+    setMenuChrome(MENU_SCREENS.includes(name) ? name : null);
   }
 
+  // Background picture and logo behind the menu screens
+  function setMenuChrome(name) {
+    menuOpen = !!name;
+    $('menu-bg').classList.toggle('hidden', !name);
+    const logo = $('logo');
+    if (name === 'title' || name === 'hub') {
+      logo.classList.remove('hidden');
+      if (!logo.classList.contains('drop')) logo.className = name;
+    } else {
+      logo.className = 'hidden';
+    }
+  }
+
+  // The floating settings button shows whenever no in-game HUD (which has its own) is visible.
+  let gearShown = null;
+  function updateGear() {
+    const show = $('loading').classList.contains('hidden') && (wrongOrientation ||
+      ($('hud').classList.contains('hidden') && $('sv-hud').classList.contains('hidden')));
+    if (show !== gearShown) { gearShown = show; $('btn-settings').classList.toggle('hidden', !show); }
+  }
+
+  function floatText(el, text) {
+    const r = el.getBoundingClientRect();
+    const d = document.createElement('div');
+    d.className = 'floaty';
+    d.textContent = text;
+    d.style.left = (r.left + r.width / 2) + 'px';
+    d.style.top = (r.top + r.height / 2) + 'px';
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 1700);
+  }
+
+  function plop(el) {
+    if (uiSfx) uiSfx.plop();
+    if (el) { el.classList.remove('boing'); void el.offsetWidth; el.classList.add('boing'); }
+  }
+
+  // ---------------------------------------------------------------------------
+  // In-game screens
+  // ---------------------------------------------------------------------------
   function pause() {
     if (!game.running || game.paused || game.wonAt || game.over) return;
     game.paused = true;
@@ -2703,7 +2919,7 @@
   }
 
   function stopRun() {
-    saveProgress();
+    if (game.running) saveProgress();
     stopAllCarSounds();
     game.cars = [];
     game.needles = [];
@@ -2712,48 +2928,14 @@
     $('hud').classList.add('hidden');
     checkOrientation();
     releaseOrientation();
-    setPlaylist(LEVELS[1].music);
+    setPlaylist(MENU_MUSIC);
   }
 
-  function toMenu() {
+  // Back from a level to where it was started from
+  function backToMenu() {
     stopRun();
-    refreshMenu();
-    showScreen('menu');
-  }
-
-  function toLevels() {
-    stopRun();
-    refreshLevels();
-    showScreen('levels');
-  }
-
-  function refreshLevels() {
-    $('levels-cat').textContent = 'Playing as ' + CATS[game.catKey].name;
-    for (const id of Object.keys(LEVELS)) {
-      const b = store.get(bestKey(Number(id)), null);
-      if (!b) $('best-' + id).textContent = 'Not cleared yet';
-      else $('best-' + id).textContent = 'Best: ' + (LEVELS[id].survival ? hitsText(b.hits || 0) : formatTime(b.time));
-    }
-    if (survivor) survivor.refreshCard();
-  }
-
-  function refreshMenu() {
-    document.querySelectorAll('.cat-card').forEach((el) => {
-      el.classList.toggle('selected', el.dataset.cat === game.catKey);
-    });
-    const play = $('btn-play');
-    play.disabled = !game.catKey;
-    play.textContent = game.catKey ? 'Play as ' + CATS[game.catKey].name : 'Choose a cat';
-    $('btn-continue').disabled = false;
-
-    const save = store.get('save', null);
-    const cont = $('btn-continue');
-    if (save && CATS[save.cat]) {
-      cont.classList.remove('hidden');
-      cont.textContent = 'Continue · Level ' + (save.level || 1) + ' · ' + Math.round((save.progress || 0) * 100) + '%';
-    } else {
-      cont.classList.add('hidden');
-    }
+    if (game.mode === 'story') openStory();
+    else showLevels();
   }
 
   function setDirectAim(v) {
@@ -2763,40 +2945,391 @@
     $('opt-invert-2').checked = v;
   }
 
-  document.querySelectorAll('.cat-card').forEach((el) => {
-    el.addEventListener('click', () => {
-      game.catKey = el.dataset.cat;
-      store.set('cat', game.catKey);
-      refreshMenu();
+  // ---------------------------------------------------------------------------
+  // Title: the logo drops in, a flash, then the name field
+  // ---------------------------------------------------------------------------
+  function playIntro() {
+    showScreen('title');
+    $('login-name').value = Profile.lastName();
+    $('login-msg').textContent = '';
+    const logo = $('logo');
+    const menu = $('title-menu');
+    menu.classList.remove('show');
+    logo.className = 'drop';
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      logo.className = 'title';
+      const fl = $('flash');
+      fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
+      setTimeout(() => menu.classList.add('show'), 140);
+    };
+    logo.addEventListener('animationend', finish, { once: true });
+    setTimeout(finish, 2200);
+    $('title').addEventListener('pointerdown', finish, { once: true });
+  }
+
+  function showTitle() {
+    showScreen('title');
+    $('logo').className = 'title';
+    $('title-menu').classList.add('show');
+    $('login-name').value = Profile.lastName();
+    $('login-msg').textContent = '';
+  }
+
+  function loginMsg(text, kind) {
+    const el = $('login-msg');
+    el.textContent = text;
+    el.className = 'login-msg' + (kind ? ' ' + kind : '');
+  }
+
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('login-name').value;
+    if (!Profile.validName(name)) { loginMsg(tr('login.invalid'), 'err'); return; }
+    plop($('login-play'));
+    $('login-play').disabled = true;
+    loginMsg(tr('login.checking'));
+    const r = await Profile.login(name);
+    $('login-play').disabled = false;
+    if (!r.ok) { loginMsg(tr(r.error === 'invalid' ? 'login.invalid' : 'login.failed'), 'err'); return; }
+    $('login-name').blur();
+    if (r.offline) loginMsg(tr('login.offline'), 'warn');
+    else loginMsg(tr(r.isNew ? 'login.welcomeNew' : 'login.welcomeBack', { name: r.name }), 'ok');
+    loadAccountSettings();
+    setTimeout(goHub, r.offline ? 1400 : 800);
+  });
+
+  $('login-guest').addEventListener('click', () => {
+    plop();
+    Profile.playAsGuest();
+    loadAccountSettings();
+    goHub();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Hub: Minigames / Story / Casino / Leaderboards
+  // ---------------------------------------------------------------------------
+  // Settings travel with the account, so they follow the player to other devices.
+  function saveSettings() {
+    if (!Profile.current) return;
+    Profile.set('settings', { lang: I18N.lang, orient: orientation, gf: gfMode, directAim, muted: audio.muted });
+  }
+
+  function loadAccountSettings() {
+    const st = Profile.get('settings', null);
+    if (!st) { saveSettings(); return; }
+    if (st.lang) I18N.setLang(st.lang);
+    if (st.orient) setOrientation(st.orient);
+    if (st.gf != null) { gfMode = !!st.gf; store.set('gfMode', gfMode); }
+    if (st.directAim != null) setDirectAim(!!st.directAim);
+    if (st.muted != null && st.muted !== audio.muted) setMuted(!!st.muted);
+  }
+
+  function goHub() {
+    if (survivor && survivor.active) survivor.quit();
+    refreshHub();
+    showScreen('hub');
+    setPlaylist(MENU_MUSIC);
+  }
+
+  function refreshHub() {
+    $('player-name').textContent = Profile.guest ? tr('hub.guest') : Profile.name;
+    $('player-coins').textContent = Profile.get('coins', 0);
+    $('player-fish').textContent = Profile.get('svCoins', 0);
+    $('player-chip').classList.toggle('guest', Profile.guest);
+    const save = Profile.get('save', null);
+    const cont = $('btn-continue');
+    if (save && CATS[save.cat] && LEVELS[save.level]) {
+      cont.classList.remove('hidden');
+      cont.textContent = '▶ ' + tr('hub.continue', { level: tr('level.' + save.level + '.name'), pct: Math.round((save.progress || 0) * 100) });
+    } else {
+      cont.classList.add('hidden');
+    }
+  }
+
+  Profile.onChange(() => {
+    if (currentScreen !== 'hub') return;
+    $('player-coins').textContent = Profile.get('coins', 0);
+    $('player-fish').textContent = Profile.get('svCoins', 0);
+  });
+
+  document.querySelectorAll('.hub-btn').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (b.classList.contains('busy')) return;
+      plop(b);
+      const go = b.dataset.go;
+      if (go === 'casino') { floatText(b, tr('hub.dev')); return; }
+      b.classList.add('busy');
+      setTimeout(() => {
+        b.classList.remove('busy');
+        if (go === 'minigames') showLevels();
+        else if (go === 'story') pickCat({ mode: 'story' });
+        else if (go === 'leaderboards') openLeaderboard();
+      }, 240);
     });
   });
 
-  $('btn-play').addEventListener('click', () => {
-    if (!game.catKey) return;
+  $('btn-continue').addEventListener('click', () => {
+    const save = Profile.get('save', null);
+    if (save && CATS[save.cat] && LEVELS[save.level]) startGame(save.cat, save.level, save, save.mode || 'mini');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Minigames (every level) and the cat picker
+  // ---------------------------------------------------------------------------
+  function showLevels() {
     refreshLevels();
     showScreen('levels');
-  });
-  $('btn-continue').addEventListener('click', () => {
-    const save = store.get('save', null);
-    if (save && CATS[save.cat]) startGame(save.cat, LEVELS[save.level] ? save.level : 1, save);
-  });
+  }
+
+  function refreshLevels() {
+    for (const id of Object.keys(LEVELS)) {
+      const b = Profile.get(bestKey(Number(id)), null);
+      $('best-' + id).textContent = !b ? tr('level.notCleared')
+        : tr('level.best', { v: LEVELS[id].survival ? hitsText(b.hits || 0) : formatTime(b.time) });
+    }
+    if (survivor) survivor.refreshCard();
+  }
+
+  let pending = null;   // what to start once a cat is picked
+  function pickCat(p) {
+    pending = p;
+    $('cats-eyebrow').textContent = p.mode === 'story' ? tr('story.title')
+      : tr(p.level === 'sv' ? 'level.sv.name' : 'level.' + p.level + '.name');
+    const story = Profile.get('story', {});
+    for (const key of Object.keys(CATS)) {
+      $('cat-progress-' + key).textContent = p.mode === 'story' ? Math.min(story[key] || 0, STORY_LEVELS.length) + ' / ' + STORY_LEVELS.length : '';
+    }
+    document.querySelectorAll('.cat-card').forEach((el) => el.classList.toggle('selected', el.dataset.cat === game.catKey));
+    showScreen('cats');
+  }
+
   document.querySelectorAll('.level-card[data-level]').forEach((el) => {
-    el.addEventListener('click', () => startGame(game.catKey, Number(el.dataset.level), null));
+    el.addEventListener('click', () => { plop(); pickCat({ mode: 'mini', level: Number(el.dataset.level) }); });
   });
-  $('sv-card').addEventListener('click', () => { if (survivor) survivor.openLobby(); });
-  $('btn-levels-back').addEventListener('click', () => { refreshMenu(); showScreen('menu'); });
-  const restart = () => startGame(game.catKey, game.levelId, null);
+  $('sv-card').addEventListener('click', () => { plop(); pickCat({ mode: 'mini', level: 'sv' }); });
+  $('btn-levels-back').addEventListener('click', goHub);
+
+  document.querySelectorAll('.cat-card').forEach((el) => {
+    el.addEventListener('click', () => {
+      if (!pending) return;
+      plop(el);
+      game.catKey = el.dataset.cat;
+      store.set('cat', game.catKey);
+      const p = pending;
+      setTimeout(() => {
+        if (p.mode === 'story') openStory();
+        else if (p.level === 'sv') { if (survivor) { showScreen(null); survivor.openLobby(); } }
+        else startGame(game.catKey, p.level, null, 'mini');
+      }, 200);
+    });
+  });
+  $('btn-cats-back').addEventListener('click', () => {
+    if (pending && pending.mode === 'story') goHub(); else showLevels();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Story: levels 1-4 in order, each cat has its own progress
+  // ---------------------------------------------------------------------------
+  function openStory() {
+    const cat = game.catKey || 'mallow';
+    const cleared = Math.min(Profile.get('story', {})[cat] || 0, STORY_LEVELS.length);
+    $('story-eyebrow').textContent = tr('story.eyebrow', { cat: CATS[cat].name });
+    const path = $('story-path');
+    path.innerHTML = '';
+    STORY_LEVELS.forEach((id, i) => {
+      const state = id <= cleared ? 'cleared' : id === cleared + 1 ? 'next' : 'locked';
+      const b = document.createElement('button');
+      b.className = 'story-step ' + state;
+      b.disabled = state === 'locked';
+      b.style.animationDelay = (i * 0.07) + 's';
+      const best = Profile.get(bestKey(id), null);
+      let status;
+      if (state === 'cleared') status = '✓ ' + tr('story.cleared') + (best ? ' · ' + (LEVELS[id].survival ? hitsText(best.hits || 0) : formatTime(best.time, false)) : '');
+      else if (state === 'next') status = '▶ ' + tr('story.next');
+      else status = '🔒 ' + tr('story.locked');
+      b.innerHTML = '<span class="story-num"></span><span class="story-info"><span class="story-name"></span><span class="story-status"></span></span>';
+      b.querySelector('.story-num').textContent = id;
+      b.querySelector('.story-name').textContent = tr('level.' + id + '.name');
+      b.querySelector('.story-status').textContent = status;
+      b.addEventListener('click', () => { plop(b); setTimeout(() => startGame(cat, id, null, 'story'), 180); });
+      path.appendChild(b);
+    });
+    $('story-done').classList.toggle('hidden', cleared < STORY_LEVELS.length);
+    showScreen('story');
+  }
+  $('btn-story-back').addEventListener('click', goHub);
+
+  // ---------------------------------------------------------------------------
+  // Leaderboards (read from Firestore)
+  // ---------------------------------------------------------------------------
+  const LB = {
+    1: { field: 'best1.time', dir: 'asc', rec: 'best1' },
+    2: { field: 'best2.time', dir: 'asc', rec: 'best2' },
+    3: { field: 'best3.time', dir: 'asc', rec: 'best3' },
+    4: { field: 'best4.score', dir: 'asc', rec: 'best4' },
+    sv: { field: 'svBest.time', dir: 'desc', rec: 'svBest' },
+    coins: { field: 'coins', dir: 'desc' },
+  };
+  let lbTab = 'levels';
+  let lbLevel = '1';
+  const lbCache = {};
+  let lbReq = 0;
+
+  function openLeaderboard() {
+    showScreen('leaderboard');
+    renderLbTabs();
+    loadLb();
+  }
+
+  function renderLbTabs() {
+    document.querySelectorAll('#lb-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === lbTab));
+    document.querySelectorAll('#lb-level-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.lb === lbLevel));
+    $('lb-level-tabs').classList.toggle('hidden', lbTab !== 'levels');
+  }
+
+  function lbValue(id, row) {
+    if (id === 'coins') return '<i class="coin-ico"></i>' + (row.coins || 0).toLocaleString();
+    const r = row[LB[id].rec] || {};
+    if (id === 'sv') return formatTime(r.time || 0, false);
+    if (id === '4') return hitsText(r.hits || 0) + ' · ' + formatTime(r.time || 0, false);
+    return formatTime(r.time || 0);
+  }
+
+  async function loadLb() {
+    const id = lbTab === 'coins' ? 'coins' : lbLevel;
+    const cfg = LB[id];
+    $('lb-caption').textContent = id === 'coins' ? tr('lb.coins') : tr(id === 'sv' ? 'level.sv.name' : 'level.' + id + '.name');
+    $('lb-note').textContent = Profile.guest ? tr('lb.guestNote') : '';
+    const list = $('lb-list');
+    const req = ++lbReq;
+    const cached = lbCache[id];
+    let rows;
+    if (cached && Date.now() - cached.at < 20000) rows = cached.rows;
+    else {
+      list.innerHTML = '<li class="lb-msg"><div class="spinner small"></div></li>';
+      try {
+        rows = await Profile.leaderboard(cfg.field, cfg.dir, 10);
+        lbCache[id] = { rows, at: Date.now() };
+      } catch (e) {
+        console.warn('Leaderboard failed', e && e.message);
+        if (req === lbReq) list.innerHTML = '<li class="lb-msg">' + tr('lb.offline') + '</li>';
+        return;
+      }
+    }
+    if (req !== lbReq) return;
+    if (!rows.length) { list.innerHTML = '<li class="lb-msg">' + tr('lb.empty') + '</li>'; return; }
+    const me = Profile.current && !Profile.guest ? Profile.current.key : null;
+    list.innerHTML = '';
+    rows.forEach((row, i) => {
+      const li = document.createElement('li');
+      li.className = 'lb-row' + (row.key === me ? ' me' : '') + (i < 3 ? ' top' + (i + 1) : '');
+      const rec = cfg.rec ? row[cfg.rec] : null;
+      const cat = rec && CATS[rec.cat] ? CATS[rec.cat] : null;
+      li.innerHTML = '<span class="lb-rank">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1) + '</span>' +
+        (cat ? '<img class="lb-cat" src="' + cat.dir + cat.prefix + 'sitting.png" alt="">' : '<span class="lb-cat"></span>') +
+        '<span class="lb-name"></span><span class="lb-val">' + lbValue(id, row) + '</span>';
+      li.querySelector('.lb-name').textContent = row.name || '?';
+      li.style.animationDelay = (i * 0.04) + 's';
+      list.appendChild(li);
+    });
+  }
+
+  document.querySelectorAll('#lb-tabs button').forEach((b) => b.addEventListener('click', () => {
+    plop(); lbTab = b.dataset.tab; renderLbTabs(); loadLb();
+  }));
+  document.querySelectorAll('#lb-level-tabs button').forEach((b) => b.addEventListener('click', () => {
+    plop(); lbLevel = b.dataset.lb; renderLbTabs(); loadLb();
+  }));
+  $('btn-lb-back').addEventListener('click', goHub);
+
+  // ---------------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------------
+  function openSettings() {
+    if (game.running && !game.paused && !game.wonAt && !game.over) pause();
+    if (survivor) survivor.pause();
+    syncSettings();
+    $('settings').classList.remove('hidden');
+  }
+
+  function closeSettings() {
+    $('settings').classList.add('hidden');
+  }
+
+  function syncSettings() {
+    document.querySelectorAll('#set-lang button').forEach((b) => b.classList.toggle('active', b.dataset.lang === I18N.lang));
+    document.querySelectorAll('#set-orient button').forEach((b) => b.classList.toggle('active', b.dataset.orient === orientation));
+    $('opt-sound').checked = !audio.muted;
+    $('opt-invert').checked = directAim;
+    $('opt-gf').checked = gfMode;
+    const p = Profile.current;
+    $('settings-player').textContent = !p ? '' : p.guest ? tr('settings.guest') : tr('settings.player', { name: p.name });
+    $('btn-switch').classList.toggle('hidden', !p);
+  }
+
+  function setOrientation(o) {
+    if (o === orientation) return;
+    orientation = o;
+    store.set('orient', o);
+    if (game.running && !(level.needles && level.builtFor !== o)) {
+      applyView();
+      resize();
+      clampCamera();
+    }
+    if (game.running || (survivor && survivor.running)) lockOrientation(o);
+    checkOrientation();
+  }
+
+  document.querySelectorAll('.gear-btn').forEach((b) => b.addEventListener('click', () => { plop(); openSettings(); }));
+  document.querySelectorAll('#set-lang button').forEach((b) => b.addEventListener('click', () => {
+    plop(); I18N.setLang(b.dataset.lang); syncSettings(); saveSettings();
+  }));
+  document.querySelectorAll('#set-orient button').forEach((b) => b.addEventListener('click', () => {
+    plop(); setOrientation(b.dataset.orient); syncSettings(); saveSettings();
+  }));
+  $('opt-sound').addEventListener('change', (e) => { setMuted(!e.target.checked); if (survivor) survivor.syncSound(); saveSettings(); });
+  $('opt-invert').addEventListener('change', (e) => { setDirectAim(e.target.checked); saveSettings(); });
+  $('opt-invert-2').addEventListener('change', (e) => { setDirectAim(e.target.checked); saveSettings(); });
+  $('opt-gf').addEventListener('change', (e) => { gfMode = e.target.checked; store.set('gfMode', gfMode); updateHud(true); saveSettings(); });
+  $('btn-settings-close').addEventListener('click', () => { plop(); closeSettings(); });
+  $('settings').addEventListener('click', (e) => { if (e.target === $('settings')) closeSettings(); });
+  $('btn-switch').addEventListener('click', () => {
+    closeSettings();
+    if (game.running) stopRun();
+    if (survivor && survivor.active) survivor.quit();
+    Profile.logout();
+    setPlaylist(MENU_MUSIC);
+    showTitle();
+  });
+
+  I18N.onChange(() => {
+    syncSettings();
+    if (currentScreen === 'hub') refreshHub();
+    if (currentScreen === 'levels') refreshLevels();
+    if (currentScreen === 'story') openStory();
+    if (currentScreen === 'cats' && pending) pickCat(pending);
+    if (currentScreen === 'leaderboard') loadLb();
+    if (game.running) updateHud(true);
+    checkOrientation();
+    if (survivor) survivor.onLanguage();
+  });
+
+  // ---------------------------------------------------------------------------
+  // In-game buttons
+  // ---------------------------------------------------------------------------
+  const restart = () => startGame(game.catKey, game.levelId, null, game.mode);
   $('btn-pause').addEventListener('click', pause);
   $('btn-resume').addEventListener('click', resume);
   $('btn-restart').addEventListener('click', restart);
-  $('btn-menu').addEventListener('click', toLevels);
+  $('btn-menu').addEventListener('click', backToMenu);
   $('btn-again').addEventListener('click', restart);
-  $('btn-win-menu').addEventListener('click', toLevels);
+  $('btn-win-menu').addEventListener('click', backToMenu);
+  $('btn-next').addEventListener('click', () => { plop(); startGame(game.catKey, game.levelId + 1, null, 'story'); });
   $('btn-over-again').addEventListener('click', restart);
-  $('btn-over-menu').addEventListener('click', toLevels);
-  $('opt-invert').addEventListener('change', (e) => setDirectAim(e.target.checked));
-  $('opt-invert-2').addEventListener('change', (e) => setDirectAim(e.target.checked));
-  $('opt-gf').addEventListener('change', (e) => { gfMode = e.target.checked; store.set('gfMode', gfMode); });
+  $('btn-over-menu').addEventListener('click', backToMenu);
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { pause(); audio.music.pause(); } else playMusic();
@@ -2808,6 +3341,8 @@
   document.addEventListener('fullscreenchange', updateFullscreenButtons);
   document.addEventListener('webkitfullscreenchange', updateFullscreenButtons);
   window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('settings').classList.contains('hidden')) { closeSettings(); return; }
+    if (e.target && e.target.tagName === 'INPUT') return;
     if (e.key === 'Escape' || e.key === 'p') {
       if (game.paused) resume(); else pause();
     }
@@ -2819,11 +3354,17 @@
   // ---------------------------------------------------------------------------
   // Backyard Survivors (endless mode, js/survivor/)
   // ---------------------------------------------------------------------------
-  let survivor = null;
+  let uiSfx = null;
+  try { uiSfx = window.SV.createSfx(audio); } catch (e) { /* no menu sounds */ }
   try {
     survivor = window.SV && window.SV.create({
-      canvas, ctx, view, sprites, CATS, audio, store, formatTime,
-      setPlaylist, showScreen, toLevels, setMuted,
+      canvas, ctx, view, sprites, CATS, audio, formatTime,
+      store: Profile,   // fish coins, Cat Tree and records belong to the player's account
+      setPlaylist, showScreen, setMuted,
+      toLevels: () => { stopRun(); showLevels(); },
+      blocked: () => wrongOrientation,
+      gfMode: () => gfMode,
+      onRunChange: checkOrientation,
       getCat: () => game.catKey || 'mallow',
     });
   } catch (e) {
@@ -2832,8 +3373,58 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Loading: a cat walks along the bar while everything loads
+  // ---------------------------------------------------------------------------
+  function setLoadProgress(f) {
+    const pct = (clamp(f, 0, 1) * 100).toFixed(1) + '%';
+    $('load-fill').style.width = pct;
+    $('load-cat').style.left = pct;
+  }
+
+  async function loadAll() {
+    const t0 = performance.now();
+    const key = Math.random() < 0.5 ? 'mallow' : 'mischko';
+    const cat = CATS[key];
+    // the walking frames come first so the loading cat can walk
+    const walk = await Promise.all([1, 2, 3, 4].map((i) => loadImage(cat.dir + cat.prefix + 'walking_' + i + '.png')));
+    const img = $('load-cat');
+    let f = 0;
+    let anim = 0;
+    if (walk[0]) {
+      img.src = walk[0].src;
+      img.classList.add('show');
+      anim = setInterval(() => { f = (f + 1) % 4; if (walk[f]) img.src = walk[f].src; }, 120);
+    }
+    const jobs = [];
+    for (const [k, c] of Object.entries(CATS)) {
+      sprites[k] = sprites[k] || {};
+      for (const pose of POSE_FILES) jobs.push(() => loadImage(c.dir + c.prefix + pose + '.png').then((im) => { sprites[k][pose] = im; }));
+    }
+    jobs.push(() => loadImage('assets/main_bg.jpg'));
+    jobs.push(() => loadImage('assets/MiMaRo_logo.png'));
+    if (document.fonts && document.fonts.ready) jobs.push(() => document.fonts.ready);
+    let done = 0;
+    await Promise.all(jobs.map((j) => j().then(() => { done++; setLoadProgress(done / jobs.length * 0.95); })));
+    for (const k of Object.keys(CATS)) {
+      const ref = sprites[k].idle;
+      sprites[k].scale = ref ? SPRITE_H / ref.height : 0.25;
+      const hit = sprites[k].hit;
+      sprites[k].hitScale = hit ? HIT_W / hit.width : sprites[k].scale;
+    }
+    // keep the walk visible for a moment even on fast connections
+    const wait = Math.max(0, 1300 - (performance.now() - t0));
+    await new Promise((r) => setTimeout(r, wait));
+    setLoadProgress(1);
+    await new Promise((r) => setTimeout(r, 350));
+    clearInterval(anim);
+    $('loading').classList.add('done');
+    setTimeout(() => $('loading').classList.add('hidden'), 500);
+  }
+
+  // ---------------------------------------------------------------------------
   // Boot
   // ---------------------------------------------------------------------------
+  I18N.applyI18n();
   resize();
   updateFullscreenButtons();
   // iPhone can't do fullscreen from a web page, but a home screen app opens fullscreen
@@ -2843,13 +3434,9 @@
   $('opt-gf').checked = gfMode;
   initAudio();
   setMuted(audio.muted);
-  loadSprites().then(() => {
-    $('loading').classList.add('hidden');
-    refreshMenu();
-    showScreen('menu');
-  });
+  loadAll().then(playIntro);
   requestAnimationFrame(frame);
 
   // debug hook for testing in the console
-  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight, survivor };
+  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight, survivor, Profile };
 })();

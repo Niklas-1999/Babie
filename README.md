@@ -1,6 +1,23 @@
-# Open the Door
+# MiMaRo – Mischko & Mallow's Adventure
 
-A tiny mobile-first jump-only platformer. Pick **Mallow** or **Mischko**, then a level:
+A small mobile-first cat game collection, in English and German.
+
+**Start:** a loading screen, then the title where you type your name (your account, saved online) or play as a guest (this device only). The hub has four buttons:
+
+- **Minigames:** play any level, then pick a cat.
+- **Story:** pick a cat, then play levels 1–4 in order. The next level unlocks when you beat the previous one, and each cat has its own progress.
+- **Casino:** coming soon.
+- **Leaderboards:** best times per level, longest Backyard Survivors run, and most coins.
+
+⚙ **Settings** (top right, always there): language, portrait/landscape for *all* games, sound, fullscreen, direct aim, Girlfriend Mode (infinite lives, just for fun: nothing is saved while it's on), switch player.
+
+Gold **coins** sit on platforms in every level (they pop up over time on the vet table). They're kept on your account for the casino and skins later. Backyard Survivors has its own fish coins for the Cat Tree.
+
+## Accounts and saving (Firebase Firestore)
+
+Each player is one document in the `players` collection, keyed by the lowercased name: name, coins, fish coins, Cat Tree upgrades, best times for every level, Backyard Survivors record, story progress per cat, the mid-level "Continue" save and the settings. Everything is cached on the device too and synced about 1.5 s after a change, so it keeps working offline and catches up later. The setup is in `js/profile.js` (Firebase config at the top). Leaderboards query that collection directly.
+
+## Levels
 
 1. **Open the Door** (portrait) – climb the door to the handle.
 2. **Kitchen Raid** (landscape) – hop across the kitchen from bottom left to top right and reach the can of cat food. Watch out for **trampolines** (launch you a few platforms ahead, follow the arrows) and **crackers** (crumble about a second after you land, then grow back).

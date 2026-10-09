@@ -1,12 +1,12 @@
 {
-  "name": "Open the Door",
-  "short_name": "Open the Door",
+  "name": "MiMaRo – Mischko & Mallow's Adventure",
+  "short_name": "MiMaRo",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
-  "orientation": "portrait",
-  "background_color": "#1b1526",
-  "theme_color": "#1b1526",
+  "orientation": "any",
+  "background_color": "#5b3a29",
+  "theme_color": "#5b3a29",
   "icons": [
     { "src": "assets/Mallow/mallow_sitting.png", "sizes": "212x202", "type": "image/png" }
   ]

@@ -11,7 +11,8 @@
     let pickupAt = 0;
 
     function ready() {
-      if (audio.muted || !audio.ctx || audio.ctx.state !== 'running') return false;
+      if (audio.muted || !audio.ctx) return false;
+      if (audio.ctx.state !== 'running') return false;
       if (!out) {
         out = audio.ctx.createGain();
         out.gain.value = 0.55;
@@ -73,6 +74,12 @@
     const r = (a, b) => a + Math.random() * (b - a);
 
     return {
+      // soft bubbly pop for menu buttons
+      plop() {
+        if (!ready() || !throttle('plop', 0.05)) return;
+        tone(r(560, 640), 0.11, { type: 'sine', to: 190, vol: 0.32 });
+        tone(r(1100, 1300), 0.05, { type: 'sine', to: 700, vol: 0.08, delay: 0.015 });
+      },
       hit() {
         if (!ready() || !throttle('hit', 0.045)) return;
         hiss(0.06, { freq: r(900, 1500), q: 1.5, vol: 0.18 });

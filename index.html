@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#1b1526">
+  <meta name="theme-color" content="#5b3a29">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Open the Door</title>
+  <title>MiMaRo – Mischko &amp; Mallow's Adventure</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="assets/Mallow/mallow_sitting.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +18,17 @@
 <body>
   <canvas id="game"></canvas>
 
-  <!-- In-game HUD -->
+  <!-- Menu backdrop, logo and the white flash -->
+  <div id="menu-bg" class="hidden"></div>
+  <img id="logo" class="hidden" src="assets/MiMaRo_logo.png" alt="MiMaRo – Mischko &amp; Mallow's Adventure">
+  <div id="flash"></div>
+
+  <!-- Settings button: always in the top right (in game it lives in the HUD) -->
+  <button class="gear-btn floating hidden" id="btn-settings" data-i18n-aria="settings.title" aria-label="Settings">
+    <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.4 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.9h4l.4-2.9a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+  </button>
+
+  <!-- In-game HUD (platform levels) -->
   <div id="hud" class="hidden">
     <div class="hud-row">
       <div class="chip" id="hud-time">00:00.0</div>
@@ -29,113 +39,168 @@
       <button class="icon-btn" id="btn-sound" aria-label="Mute">
         <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <button class="icon-btn fs-btn" aria-label="Fullscreen"><svg class="fs-enter" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
+      <button class="icon-btn gear-btn" data-i18n-aria="settings.title" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.4 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.9h4l.4-2.9a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+      </button>
       <button class="icon-btn" id="btn-pause" aria-label="Pause">
         <svg viewBox="0 0 24 24" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
       </button>
     </div>
     <div class="hud-sub">
       <div class="hearts" id="hud-hearts" aria-label="Lives"></div>
+      <span class="hud-coins"><i class="coin-ico"></i><span id="hud-coins">0</span></span>
       <span id="hud-jumps">0 jumps</span>
     </div>
     <div id="toast" class="toast"></div>
     <div id="hint" class="hint">
       <div class="hint-hand"></div>
-      <span>Drag back &amp; release to jump</span>
+      <span data-i18n="hud.dragHint">Drag back &amp; release to jump</span>
     </div>
   </div>
 
-  <!-- Main menu / character select -->
-  <section id="menu" class="screen">
-    <div class="panel">
-      <p class="eyebrow">A Mallow &amp; Mischko adventure</p>
-      <h1>Open the Door</h1>
-      <p class="sub">Climb all the way up to the door handle.</p>
+  <!-- Title: enter a name or play as guest -->
+  <section id="title" class="screen clear hidden">
+    <div class="title-menu" id="title-menu">
+      <form id="login-form" autocomplete="off">
+        <input id="login-name" type="text" maxlength="16" spellcheck="false" autocapitalize="words" data-i18n-ph="login.placeholder" placeholder="Your name">
+        <button class="btn primary" type="submit" id="login-play" data-i18n="login.play">Play</button>
+      </form>
+      <p class="login-msg" id="login-msg"></p>
+      <button class="link-btn" id="login-guest" data-i18n="login.guest">Play as guest</button>
+      <p class="login-note" data-i18n="login.guestNote">Guests play locally, nothing is saved online</p>
+    </div>
+  </section>
 
-      <div class="cats" id="cat-select">
-        <button class="cat-card" data-cat="mallow">
-          <div class="cat-img"><img src="assets/Mallow/mallow_sitting.png" alt="Mallow"></div>
-          <div class="cat-name">Mallow</div>
-          <div class="cat-desc">Fluffy &amp; grumpy</div>
-        </button>
-        <button class="cat-card" data-cat="mischko">
-          <div class="cat-img"><img src="assets/Mischko/mischko_sitting.png" alt="Mischko"></div>
-          <div class="cat-name">Mischko</div>
-          <div class="cat-desc">Small &amp; sneaky</div>
-        </button>
-      </div>
-
-      <div class="actions">
-        <button class="btn primary" id="btn-play" disabled>Choose a cat</button>
-        <button class="btn ghost hidden" id="btn-continue">Continue</button>
-      </div>
-
-      <div class="menu-foot">
-        <button class="btn ghost small fs-btn" aria-label="Fullscreen"><svg class="fs-enter" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg><span class="fs-label-enter">Fullscreen</span><span class="fs-label-exit">Exit fullscreen</span></button>
-        <p class="tip hidden" id="ios-tip">Tip: for fullscreen on iPhone, tap Share &rarr; <b>Add to Home Screen</b> and play from there.</p>
-        <label class="toggle">
-          <input type="checkbox" id="opt-invert">
-          <span class="track"><span class="knob"></span></span>
-          <span>Direct aim (drag toward target)</span>
-        </label>
-        <label class="toggle gf">
-          <input type="checkbox" id="opt-gf">
-          <span class="track"><span class="knob"></span></span>
-          <span>Girlfriend Mode &#9829; (infinite lives)</span>
-        </label>
+  <!-- Hub: the four main buttons -->
+  <section id="hub" class="screen clear hidden">
+    <div class="player-chip" id="player-chip">
+      <span class="player-paw">&#128062;</span>
+      <span class="player-name" id="player-name"></span>
+      <span class="player-coins"><i class="coin-ico"></i><span id="player-coins">0</span></span>
+      <span class="player-coins fish"><span class="fish-ico">&#128176;</span><span id="player-fish">0</span></span>
+    </div>
+    <div class="hub-menu">
+      <button class="btn small ghost hub-continue hidden" id="btn-continue"></button>
+      <div class="hub-buttons">
+        <button class="hub-btn minigames" data-go="minigames"><span class="hub-icon">&#127918;</span><span data-i18n="hub.minigames">Minigames</span></button>
+        <button class="hub-btn story" data-go="story"><span class="hub-icon">&#128214;</span><span data-i18n="hub.story">Story</span></button>
+        <button class="hub-btn casino" data-go="casino"><span class="hub-icon">&#127920;</span><span data-i18n="hub.casino">Casino</span></button>
+        <button class="hub-btn leaderboards" data-go="leaderboards"><span class="hub-icon">&#127942;</span><span data-i18n="hub.leaderboards">Leaderboards</span></button>
       </div>
     </div>
   </section>
 
-  <!-- Level select -->
+  <!-- Minigames: every level -->
   <section id="levels" class="screen hidden">
     <div class="panel">
-      <p class="eyebrow" id="levels-cat">Playing as</p>
-      <h2>Choose a level</h2>
+      <p class="eyebrow" data-i18n="levels.eyebrow">Pick any game</p>
+      <h2 data-i18n="levels.title">Minigames</h2>
       <div class="levels">
         <button class="level-card" data-level="1">
           <div class="level-icon door">&#128682;</div>
           <div class="level-info">
-            <div class="level-name"><span class="level-num">1</span> Open the Door</div>
-            <div class="level-desc">Climb up the door to the handle</div>
-            <div class="level-meta"><span class="orient portrait">Portrait</span><span class="level-best" id="best-1"></span></div>
+            <div class="level-name"><span class="level-num">1</span> <span data-i18n="level.1.name">Open the Door</span></div>
+            <div class="level-desc" data-i18n="level.1.desc">Climb up the door to the handle</div>
+            <div class="level-meta"><span class="level-best" id="best-1"></span></div>
           </div>
         </button>
         <button class="level-card" data-level="2">
           <div class="level-icon kitchen">&#129387;</div>
           <div class="level-info">
-            <div class="level-name"><span class="level-num">2</span> Kitchen Raid</div>
-            <div class="level-desc">Trampolines, crumbly crackers &amp; cat food</div>
-            <div class="level-meta"><span class="orient landscape">Landscape</span><span class="level-best" id="best-2"></span></div>
+            <div class="level-name"><span class="level-num">2</span> <span data-i18n="level.2.name">Kitchen Raid</span></div>
+            <div class="level-desc" data-i18n="level.2.desc">Trampolines, crumbly crackers &amp; cat food</div>
+            <div class="level-meta"><span class="level-best" id="best-2"></span></div>
           </div>
         </button>
         <button class="level-card" data-level="3">
           <div class="level-icon street">&#128663;</div>
           <div class="level-info">
-            <div class="level-name"><span class="level-num">3</span> Street Dash</div>
-            <div class="level-desc">Jump over the traffic and reach the forest</div>
-            <div class="level-meta"><span class="orient landscape">Landscape</span><span class="level-best" id="best-3"></span></div>
+            <div class="level-name"><span class="level-num">3</span> <span data-i18n="level.3.name">Street Dash</span></div>
+            <div class="level-desc" data-i18n="level.3.desc">Jump over the traffic and reach the forest</div>
+            <div class="level-meta"><span class="level-best" id="best-3"></span></div>
           </div>
         </button>
         <button class="level-card" data-level="4">
           <div class="level-icon vet">&#128137;</div>
           <div class="level-info">
-            <div class="level-name"><span class="level-num">4</span> Vet Visit</div>
-            <div class="level-desc">Dodge the falling needles for 2 minutes</div>
-            <div class="level-meta"><span class="orient landscape">Landscape</span><span class="level-best" id="best-4"></span></div>
+            <div class="level-name"><span class="level-num">4</span> <span data-i18n="level.4.name">Vet Visit</span></div>
+            <div class="level-desc" data-i18n="level.4.desc">Dodge the falling needles for 2 minutes</div>
+            <div class="level-meta"><span class="level-best" id="best-4"></span></div>
           </div>
         </button>
         <button class="level-card survivor-card" id="sv-card">
           <div class="level-icon backyard">&#128062;</div>
           <div class="level-info">
-            <div class="level-name"><span class="level-num">&infin;</span> Backyard Survivors</div>
-            <div class="level-desc">Endless hunt: level up, build your cat, survive the swarm</div>
-            <div class="level-meta"><span class="orient portrait">Portrait</span><span class="orient endless">Endless</span><span class="level-best" id="best-sv"></span></div>
+            <div class="level-name"><span class="level-num">&infin;</span> <span data-i18n="level.sv.name">Backyard Survivors</span></div>
+            <div class="level-desc" data-i18n="level.sv.desc">Endless hunt: level up, build your cat, survive the swarm</div>
+            <div class="level-meta"><span class="orient endless" data-i18n="level.endless">Endless</span><span class="level-best" id="best-sv"></span></div>
           </div>
         </button>
       </div>
       <div class="actions">
-        <button class="btn ghost" id="btn-levels-back">Back</button>
+        <button class="btn ghost" id="btn-levels-back" data-i18n="back">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cat picker -->
+  <section id="cats" class="screen hidden">
+    <div class="panel">
+      <p class="eyebrow" id="cats-eyebrow"></p>
+      <h2 data-i18n="cats.title">Choose your cat</h2>
+      <div class="cats" id="cat-select">
+        <button class="cat-card" data-cat="mallow">
+          <div class="cat-img"><img src="assets/Mallow/mallow_sitting.png" alt="Mallow"></div>
+          <div class="cat-name">Mallow</div>
+          <div class="cat-desc" data-i18n="cats.mallowDesc">Fluffy &amp; grumpy</div>
+          <div class="cat-progress" id="cat-progress-mallow"></div>
+        </button>
+        <button class="cat-card" data-cat="mischko">
+          <div class="cat-img"><img src="assets/Mischko/mischko_sitting.png" alt="Mischko"></div>
+          <div class="cat-name">Mischko</div>
+          <div class="cat-desc" data-i18n="cats.mischkoDesc">Small &amp; sneaky</div>
+          <div class="cat-progress" id="cat-progress-mischko"></div>
+        </button>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="btn-cats-back" data-i18n="back">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Story: levels unlock one after another, per cat -->
+  <section id="story" class="screen hidden">
+    <div class="panel">
+      <p class="eyebrow" id="story-eyebrow"></p>
+      <h2 data-i18n="story.title">Story</h2>
+      <div class="story-path" id="story-path"></div>
+      <p class="story-done hidden" id="story-done" data-i18n="story.done"></p>
+      <div class="actions">
+        <button class="btn ghost" id="btn-story-back" data-i18n="back">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Leaderboards -->
+  <section id="leaderboard" class="screen hidden">
+    <div class="panel lb-panel">
+      <h2 data-i18n="lb.title">Leaderboards</h2>
+      <div class="seg" id="lb-tabs">
+        <button data-tab="levels" class="active" data-i18n="lb.levels">Best times</button>
+        <button data-tab="coins" data-i18n="lb.coins">Most coins</button>
+      </div>
+      <div class="lb-levels" id="lb-level-tabs">
+        <button data-lb="1" class="active">1</button>
+        <button data-lb="2">2</button>
+        <button data-lb="3">3</button>
+        <button data-lb="4">4</button>
+        <button data-lb="sv">&infin;</button>
+      </div>
+      <p class="lb-caption" id="lb-caption"></p>
+      <ol class="lb-list" id="lb-list"></ol>
+      <p class="lb-note" id="lb-note"></p>
+      <div class="actions">
+        <button class="btn ghost" id="btn-lb-back" data-i18n="back">Back</button>
       </div>
     </div>
   </section>
@@ -143,16 +208,16 @@
   <!-- Pause -->
   <section id="pause" class="screen hidden">
     <div class="panel small">
-      <h2>Paused</h2>
+      <h2 data-i18n="pause.title">Paused</h2>
       <div class="actions col">
-        <button class="btn primary" id="btn-resume">Resume</button>
-        <button class="btn ghost" id="btn-restart">Restart</button>
-        <button class="btn ghost" id="btn-menu">Levels</button>
+        <button class="btn primary" id="btn-resume" data-i18n="pause.resume">Resume</button>
+        <button class="btn ghost" id="btn-restart" data-i18n="pause.restart">Restart</button>
+        <button class="btn ghost" id="btn-menu" data-i18n="pause.levels">Levels</button>
       </div>
       <label class="toggle">
         <input type="checkbox" id="opt-invert-2">
         <span class="track"><span class="knob"></span></span>
-        <span>Direct aim</span>
+        <span data-i18n="pause.directAim">Direct aim</span>
       </label>
     </div>
   </section>
@@ -160,18 +225,21 @@
   <!-- Win -->
   <section id="win" class="screen hidden">
     <div class="panel">
-      <p class="eyebrow">You made it!</p>
+      <p class="eyebrow" data-i18n="win.eyebrow">You made it!</p>
       <h2 id="win-title">Door opened!</h2>
       <div class="win-cat"><img id="win-img" src="" alt=""></div>
-      <div class="stats">
-        <div><span class="stat-val" id="win-time">0:00</span><span class="stat-label">Time</span></div>
-        <div><span class="stat-val" id="win-jumps">0</span><span class="stat-label">Jumps</span></div>
+      <div class="stats four">
+        <div><span class="stat-val" id="win-time">0:00</span><span class="stat-label" data-i18n="win.time">Time</span></div>
+        <div><span class="stat-val" id="win-jumps">0</span><span class="stat-label" data-i18n="win.jumps">Jumps</span></div>
         <div><span class="stat-val" id="win-falls">0</span><span class="stat-label" id="win-falls-label">Big falls</span></div>
+        <div><span class="stat-val" id="win-coins">0</span><span class="stat-label" data-i18n="win.coins">Coins</span></div>
       </div>
       <p class="best" id="win-best"></p>
+      <p class="story-unlock hidden" id="win-unlock" data-i18n="story.unlocked"></p>
       <div class="actions">
-        <button class="btn primary" id="btn-again">Play again</button>
-        <button class="btn ghost" id="btn-win-menu">Levels</button>
+        <button class="btn ghost" id="btn-win-menu" data-i18n="pause.levels">Levels</button>
+        <button class="btn ghost" id="btn-again" data-i18n="win.again">Play again</button>
+        <button class="btn primary hidden" id="btn-next" data-i18n="story.nextLevel">Next level</button>
       </div>
     </div>
   </section>
@@ -179,27 +247,20 @@
   <!-- Game over -->
   <section id="over" class="screen hidden">
     <div class="panel">
-      <p class="eyebrow">Out of lives</p>
-      <h2>Game over</h2>
+      <p class="eyebrow" data-i18n="over.eyebrow">Out of lives</p>
+      <h2 data-i18n="over.title">Game over</h2>
       <p class="sub" id="over-sub">The door stays shut… for now.</p>
       <div class="stats">
-        <div><span class="stat-val" id="over-progress">0%</span><span class="stat-label">Reached</span></div>
-        <div><span class="stat-val" id="over-time">0:00</span><span class="stat-label">Time</span></div>
-        <div><span class="stat-val" id="over-jumps">0</span><span class="stat-label">Jumps</span></div>
+        <div><span class="stat-val" id="over-progress">0%</span><span class="stat-label" data-i18n="over.reached">Reached</span></div>
+        <div><span class="stat-val" id="over-time">0:00</span><span class="stat-label" data-i18n="win.time">Time</span></div>
+        <div><span class="stat-val" id="over-coins">0</span><span class="stat-label" data-i18n="win.coins">Coins</span></div>
       </div>
       <div class="actions">
-        <button class="btn primary" id="btn-over-again">Try again</button>
-        <button class="btn ghost" id="btn-over-menu">Levels</button>
+        <button class="btn ghost" id="btn-over-menu" data-i18n="pause.levels">Levels</button>
+        <button class="btn primary" id="btn-over-again" data-i18n="over.again">Try again</button>
       </div>
     </div>
   </section>
-
-  <!-- Shown on phones held the wrong way for the current level -->
-  <div id="rotate" class="hidden">
-    <div class="rotate-phone"></div>
-    <p id="rotate-text">Turn your phone sideways</p>
-    <p class="rotate-sub">The game is paused until then</p>
-  </div>
 
   <!-- Backyard Survivors: HUD -->
   <div id="sv-hud" class="hidden">
@@ -214,7 +275,9 @@
         <button class="icon-btn" id="sv-btn-sound" aria-label="Mute">
           <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
-        <button class="icon-btn fs-btn" aria-label="Fullscreen"><svg class="fs-enter" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
+        <button class="icon-btn gear-btn" data-i18n-aria="settings.title" aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.4 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.9h4l.4-2.9a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+        </button>
         <button class="icon-btn" id="sv-btn-pause" aria-label="Pause">
           <svg viewBox="0 0 24 24" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
         </button>
@@ -225,16 +288,16 @@
     <div class="sv-banner" id="sv-banner"></div>
     <div id="sv-hint" class="hint">
       <div class="hint-hand"></div>
-      <span>Drag anywhere to move</span>
+      <span data-i18n="sv.dragHint">Drag anywhere to move</span>
     </div>
   </div>
 
   <!-- Backyard Survivors: lobby + Cat Tree -->
   <section id="sv-lobby" class="screen hidden">
     <div class="panel sv-panel">
-      <p class="eyebrow">Endless mode</p>
-      <h2>Backyard Survivors</h2>
-      <p class="sub">The critters of the garden have teamed up. Hunt them down and see how long you can last.</p>
+      <p class="eyebrow" data-i18n="sv.eyebrow">Endless mode</p>
+      <h2 data-i18n="level.sv.name">Backyard Survivors</h2>
+      <p class="sub" data-i18n="sv.sub">The critters of the garden have teamed up. Hunt them down and see how long you can last.</p>
       <div class="sv-lobby-cat">
         <img id="sv-lobby-img" src="" alt="">
         <div>
@@ -243,12 +306,12 @@
         </div>
       </div>
       <div class="stats sv-records" id="sv-records"></div>
-      <div class="sv-tree-head"><h3>Cat Tree</h3><span class="sv-bank" id="sv-bank"></span></div>
-      <p class="sv-tree-sub">Permanent upgrades, bought with fish coins from your hunts.</p>
+      <div class="sv-tree-head"><h3 data-i18n="sv.tree">Cat Tree</h3><span class="sv-bank" id="sv-bank"></span></div>
+      <p class="sv-tree-sub" data-i18n="sv.treeSub">Permanent upgrades, bought with fish coins from your hunts.</p>
       <div class="sv-tree" id="sv-tree"></div>
       <div class="actions sv-sticky">
-        <button class="btn ghost" id="sv-lobby-back">Back</button>
-        <button class="btn primary" id="sv-start">Start hunt</button>
+        <button class="btn ghost" id="sv-lobby-back" data-i18n="back">Back</button>
+        <button class="btn primary" id="sv-start" data-i18n="sv.start">Start hunt</button>
       </div>
     </div>
   </section>
@@ -257,12 +320,12 @@
   <section id="sv-levelup" class="screen hidden sv-modal">
     <div class="panel sv-panel">
       <p class="eyebrow" id="sv-lu-level">Level 2</p>
-      <h2>Level up!</h2>
-      <p class="sub">Pick one</p>
+      <h2 data-i18n="sv.levelUp">Level up!</h2>
+      <p class="sub" data-i18n="sv.pickOne">Pick one</p>
       <div class="sv-cards" id="sv-cards"></div>
       <div class="actions">
         <button class="btn ghost" id="sv-reroll">Reroll</button>
-        <button class="btn ghost" id="sv-skip">Skip</button>
+        <button class="btn ghost" id="sv-skip" data-i18n="sv.skip">Skip</button>
       </div>
     </div>
   </section>
@@ -270,23 +333,23 @@
   <!-- Backyard Survivors: cardboard box (chest) -->
   <section id="sv-chest" class="screen hidden sv-modal">
     <div class="panel sv-panel">
-      <p class="eyebrow">Treasure</p>
+      <p class="eyebrow" data-i18n="sv.treasure">Treasure</p>
       <h2 id="sv-chest-title">A cardboard box!</h2>
       <div class="sv-box" id="sv-chest-box"><span class="sv-box-glow"></span><span class="sv-box-emoji">&#128230;</span></div>
       <div class="sv-loot" id="sv-loot"></div>
-      <div class="actions"><button class="btn primary" id="sv-chest-ok">Collect</button></div>
+      <div class="actions"><button class="btn primary" id="sv-chest-ok" data-i18n="sv.collect">Collect</button></div>
     </div>
   </section>
 
   <!-- Backyard Survivors: pause -->
   <section id="sv-pause" class="screen hidden">
     <div class="panel sv-panel">
-      <h2>Paused</h2>
+      <h2 data-i18n="sv.paused">Paused</h2>
       <div class="sv-build" id="sv-build"></div>
       <div class="sv-stats" id="sv-stats"></div>
       <div class="actions sv-sticky">
-        <button class="btn ghost" id="sv-giveup">Give up</button>
-        <button class="btn primary" id="sv-resume">Resume</button>
+        <button class="btn ghost" id="sv-giveup" data-i18n="sv.giveUp">Give up</button>
+        <button class="btn primary" id="sv-resume" data-i18n="sv.resume">Resume</button>
       </div>
     </div>
   </section>
@@ -294,27 +357,88 @@
   <!-- Backyard Survivors: results -->
   <section id="sv-over" class="screen hidden">
     <div class="panel sv-panel">
-      <p class="eyebrow">The hunt is over</p>
+      <p class="eyebrow" data-i18n="sv.over">The hunt is over</p>
       <h2 id="sv-over-title">Good hunt!</h2>
       <div class="win-cat"><img id="sv-over-img" src="" alt=""></div>
       <div class="stats">
-        <div><span class="stat-val" id="sv-o-time">0:00</span><span class="stat-label">Survived</span></div>
-        <div><span class="stat-val" id="sv-o-level">1</span><span class="stat-label">Level</span></div>
-        <div><span class="stat-val" id="sv-o-kills">0</span><span class="stat-label">Critters</span></div>
+        <div><span class="stat-val" id="sv-o-time">0:00</span><span class="stat-label" data-i18n="sv.survived">Survived</span></div>
+        <div><span class="stat-val" id="sv-o-level">1</span><span class="stat-label" data-i18n="sv.lvl">Level</span></div>
+        <div><span class="stat-val" id="sv-o-kills">0</span><span class="stat-label" data-i18n="sv.critters">Critters</span></div>
       </div>
       <p class="sv-earned" id="sv-o-coins"></p>
       <p class="best" id="sv-o-best"></p>
       <div class="sv-dmg" id="sv-o-dmg"></div>
       <div class="actions sv-sticky">
-        <button class="btn ghost" id="sv-over-levels">Levels</button>
-        <button class="btn ghost" id="sv-over-lobby">Cat Tree</button>
-        <button class="btn primary" id="sv-again">Again</button>
+        <button class="btn ghost" id="sv-over-levels" data-i18n="pause.levels">Levels</button>
+        <button class="btn ghost" id="sv-over-lobby" data-i18n="sv.tree">Cat Tree</button>
+        <button class="btn primary" id="sv-again" data-i18n="sv.again">Again</button>
       </div>
     </div>
   </section>
 
-  <div id="loading" class="screen"><div class="spinner"></div></div>
+  <!-- Settings (on top of everything) -->
+  <section id="settings" class="screen hidden">
+    <div class="panel small settings-panel">
+      <h2 data-i18n="settings.title">Settings</h2>
+      <p class="settings-player" id="settings-player"></p>
+      <div class="setting">
+        <span class="setting-label" data-i18n="settings.language">Language</span>
+        <div class="seg" id="set-lang">
+          <button data-lang="en">English</button>
+          <button data-lang="de">Deutsch</button>
+        </div>
+      </div>
+      <div class="setting">
+        <span class="setting-label" data-i18n="settings.orientation">Screen orientation</span>
+        <div class="seg" id="set-orient">
+          <button data-orient="portrait"><span class="orient-ico portrait"></span><span data-i18n="settings.portrait">Portrait</span></button>
+          <button data-orient="landscape"><span class="orient-ico landscape"></span><span data-i18n="settings.landscape">Landscape</span></button>
+        </div>
+      </div>
+      <div class="setting-toggles">
+        <label class="toggle">
+          <input type="checkbox" id="opt-sound">
+          <span class="track"><span class="knob"></span></span>
+          <span data-i18n="settings.sound">Sound</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="opt-invert">
+          <span class="track"><span class="knob"></span></span>
+          <span data-i18n="settings.directAim">Direct aim (drag toward target)</span>
+        </label>
+        <label class="toggle gf">
+          <input type="checkbox" id="opt-gf">
+          <span class="track"><span class="knob"></span></span>
+          <span data-i18n="settings.gf">Girlfriend Mode &#9829; (infinite lives)</span>
+        </label>
+        <p class="setting-note" data-i18n="settings.gfNote"></p>
+      </div>
+      <button class="btn ghost small fs-btn" id="btn-fullscreen"><svg class="fs-enter" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg><span class="fs-label-enter" data-i18n="settings.fullscreen">Fullscreen</span><span class="fs-label-exit" data-i18n="settings.exitFullscreen">Exit fullscreen</span></button>
+      <p class="tip hidden" id="ios-tip" data-i18n="settings.iosTip"></p>
+      <div class="actions col">
+        <button class="btn ghost small hidden" id="btn-switch" data-i18n="settings.switch">Switch player</button>
+        <button class="btn primary" id="btn-settings-close" data-i18n="close">Close</button>
+      </div>
+    </div>
+  </section>
 
+  <!-- Shown on phones held the wrong way -->
+  <div id="rotate" class="hidden">
+    <div class="rotate-phone"></div>
+    <p id="rotate-text">Turn your phone sideways</p>
+    <p class="rotate-sub" data-i18n="rotate.sub">The game is paused until then</p>
+  </div>
+
+  <!-- Loading: a cat walking along the progress bar -->
+  <div id="loading">
+    <div class="load-track">
+      <img id="load-cat" src="" alt="">
+      <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/profile.js"></script>
   <script src="js/survivor/data.js"></script>
   <script src="js/survivor/art.js"></script>
   <script src="js/survivor/audio.js"></script>
