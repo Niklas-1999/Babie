@@ -12,14 +12,30 @@
   <link rel="icon" type="image/png" href="assets/Mallow/mallow_sitting.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Theme before first paint, so even the loading screen is in the right mode (Halloween by default)
+    (function () {
+      var t = 'halloween';
+      try { var v = JSON.parse(localStorage.getItem('otd.theme')); if (v === 'normal' || v === 'halloween') t = v; } catch (e) {}
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
 </head>
 <body>
   <canvas id="game"></canvas>
 
   <!-- Menu backdrop, logo and the white flash -->
   <div id="menu-bg" class="hidden"></div>
+  <!-- Halloween ambience over the menu background: bats, falling leaves, fog -->
+  <div id="spooky" aria-hidden="true">
+    <div class="fog f1"></div><div class="fog f2"></div>
+    <svg class="bat b1" viewBox="0 0 64 32"><path d="M32 12c2-4 4-6 4-6s1 4 0 6c6-6 16-8 28-4-6 2-10 6-10 12-4-4-9-4-12 0-2-3-6-4-8-2-2-2-6-1-8 2-3-4-8-4-12 0 0-6-4-10-10-12 12-4 22-2 28 4-1-2 0-6 0-6s2 2 4 6z"/></svg>
+    <svg class="bat b2" viewBox="0 0 64 32"><path d="M32 12c2-4 4-6 4-6s1 4 0 6c6-6 16-8 28-4-6 2-10 6-10 12-4-4-9-4-12 0-2-3-6-4-8-2-2-2-6-1-8 2-3-4-8-4-12 0 0-6-4-10-10-12 12-4 22-2 28 4-1-2 0-6 0-6s2 2 4 6z"/></svg>
+    <svg class="bat b3" viewBox="0 0 64 32"><path d="M32 12c2-4 4-6 4-6s1 4 0 6c6-6 16-8 28-4-6 2-10 6-10 12-4-4-9-4-12 0-2-3-6-4-8-2-2-2-6-1-8 2-3-4-8-4-12 0 0-6-4-10-10-12 12-4 22-2 28 4-1-2 0-6 0-6s2 2 4 6z"/></svg>
+    <i class="leaf l1"></i><i class="leaf l2"></i><i class="leaf l3"></i><i class="leaf l4"></i><i class="leaf l5"></i><i class="leaf l6"></i><i class="leaf l7"></i>
+  </div>
   <img id="logo" class="hidden" src="assets/MiMaRo_logo.png" alt="MiMaRo – Mischko &amp; Mallow's Adventure">
   <div id="flash"></div>
 
@@ -80,8 +96,14 @@
       <span class="player-coins fish"><span class="fish-ico">&#128176;</span><span id="player-fish">0</span></span>
     </div>
     <div class="hub-menu">
-      <button class="btn small ghost hub-continue hidden" id="btn-continue"></button>
-      <div class="hub-buttons">
+      <button class="btn small ghost hub-continue normal-only hidden" id="btn-continue"></button>
+      <!-- Halloween: only the three new games -->
+      <div class="hub-buttons hw-only">
+        <button class="hub-btn hw broom" data-go="hw-broom"><span class="hub-icon">&#129529;</span><span data-i18n="hw.broom">Broom Ride</span></button>
+        <button class="hub-btn hw haunted" data-go="hw-haunted"><span class="hub-icon">&#128123;</span><span data-i18n="hw.haunted">Haunted House</span></button>
+        <button class="hub-btn hw pumpkin" data-go="hw-pumpkin"><span class="hub-icon">&#127875;</span><span data-i18n="hw.pumpkin">Pumpkin Patch</span></button>
+      </div>
+      <div class="hub-buttons normal-only">
         <button class="hub-btn minigames" data-go="minigames"><span class="hub-icon">&#127918;</span><span data-i18n="hub.minigames">Minigames</span></button>
         <button class="hub-btn story" data-go="story"><span class="hub-icon">&#128214;</span><span data-i18n="hub.story">Story</span></button>
         <button class="hub-btn casino" data-go="casino"><span class="hub-icon">&#127920;</span><span data-i18n="hub.casino">Casino</span></button>
@@ -386,6 +408,13 @@
         <div class="seg" id="set-lang">
           <button data-lang="en">English</button>
           <button data-lang="de">Deutsch</button>
+        </div>
+      </div>
+      <div class="setting">
+        <span class="setting-label" data-i18n="settings.theme">Event</span>
+        <div class="seg" id="set-theme">
+          <button data-theme-btn="halloween">&#127875; <span data-i18n="settings.halloween">Halloween</span></button>
+          <button data-theme-btn="normal">&#9728;&#65039; <span data-i18n="settings.normal">Normal</span></button>
         </div>
       </div>
       <div class="setting">

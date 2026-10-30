@@ -34,6 +34,13 @@
 
     // settings
     'settings.title': 'Settings',
+    'settings.theme': 'Event',
+    'settings.halloween': 'Halloween',
+    'settings.normal': 'Normal',
+    'hw.broom': 'Broom Ride',
+    'hw.haunted': 'Haunted House',
+    'hw.pumpkin': 'Pumpkin Patch',
+    'hw.soon': 'Coming soon… 👻',
     'settings.language': 'Language',
     'settings.orientation': 'Screen orientation',
     'settings.portrait': 'Portrait',
@@ -238,6 +245,13 @@
     'hub.continue': 'Weiter · {level} · {pct}%',
 
     'settings.title': 'Einstellungen',
+    'settings.theme': 'Event',
+    'settings.halloween': 'Halloween',
+    'settings.normal': 'Normal',
+    'hw.broom': 'Besenflug',
+    'hw.haunted': 'Spukhaus',
+    'hw.pumpkin': 'Kürbisfeld',
+    'hw.soon': 'Kommt bald… 👻',
     'settings.language': 'Sprache',
     'settings.orientation': 'Bildschirmausrichtung',
     'settings.portrait': 'Hochformat',

@@ -825,3 +825,168 @@ h2 { font-size: 32px; margin-bottom: 8px; }
   .hub-buttons { flex-direction: row; }
   .hub-btn { flex-direction: column; gap: 6px; padding: 18px 8px; justify-content: center; border-radius: 28px; }
 }
+
+/* ===================================================================== */
+/* Halloween event (html[data-theme="halloween"])                        */
+/* ===================================================================== */
+.hub-buttons.hw-only { display: none; }
+#spooky { display: none; }
+
+[data-theme="halloween"] {
+  --bg: #140a1e;
+  --panel: rgba(28, 13, 40, 0.88);
+  --panel-border: rgba(255, 138, 31, 0.3);
+  --text: #fff4e6;
+  --muted: #c9b3d9;
+  --accent: #ff8a1f;
+  --accent-2: #b06cff;
+  --good: #8be04e;
+}
+[data-theme="halloween"] .hub-buttons.hw-only { display: flex; }
+[data-theme="halloween"] .normal-only { display: none !important; }
+
+/* ---------- backdrop, logo, flash ---------- */
+[data-theme="halloween"] #menu-bg { background: #120a24 url("assets/main_bg_halloween.jpg") center 30% / cover no-repeat; }
+[data-theme="halloween"] #logo { filter: drop-shadow(0 0 18px rgba(255, 140, 30, 0.45)) drop-shadow(0 10px 16px rgba(10, 0, 20, 0.6)); }
+[data-theme="halloween"] #flash { background: #f2eaff; }
+[data-theme="halloween"] #flash.go { animation: lightning 0.8s ease-out; }
+@keyframes lightning {
+  0% { opacity: 0; } 6% { opacity: 0.9; } 14% { opacity: 0.08; } 22% { opacity: 0.75; }
+  34% { opacity: 0.15; } 42% { opacity: 0.35; } 100% { opacity: 0; }
+}
+
+/* ---------- loading ---------- */
+[data-theme="halloween"] #loading { background: radial-gradient(120% 90% at 50% 35%, #2a1240, #120818 70%); }
+[data-theme="halloween"] .load-bar { background: rgba(255, 138, 31, 0.18); }
+[data-theme="halloween"] .load-fill { background: linear-gradient(90deg, #ffb347, #ff7a1a); box-shadow: 0 0 10px rgba(255, 138, 31, 0.8); }
+[data-theme="halloween"] #load-cat { filter: drop-shadow(0 0 10px rgba(255, 150, 50, 0.35)); }
+
+/* ---------- ambience: bats, leaves, fog ---------- */
+[data-theme="halloween"] #menu-bg:not(.hidden) ~ #spooky {
+  display: block; position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden;
+}
+#spooky .bat { position: absolute; width: 46px; height: 23px; fill: #0c0614; opacity: 0.9; }
+#spooky .bat path { transform-origin: 50% 40%; animation: flap 0.28s ease-in-out infinite alternate; }
+#spooky .b1 { animation: bat-fly-1 14s linear infinite; }
+#spooky .b2 { animation: bat-fly-2 19s linear infinite 4s; width: 34px; height: 17px; opacity: 0.75; }
+#spooky .b3 { animation: bat-fly-3 23s linear infinite 9s; width: 28px; height: 14px; opacity: 0.6; }
+@keyframes flap { from { transform: scaleY(1); } to { transform: scaleY(0.45); } }
+@keyframes bat-fly-1 {
+  0% { left: -12%; top: 22%; } 25% { top: 14%; } 50% { top: 26%; } 75% { top: 12%; } 100% { left: 110%; top: 20%; }
+}
+@keyframes bat-fly-2 {
+  0% { left: 110%; top: 9%; transform: scaleX(-1); } 30% { top: 18%; } 60% { top: 6%; } 100% { left: -12%; top: 15%; transform: scaleX(-1); }
+}
+@keyframes bat-fly-3 {
+  0% { left: -10%; top: 35%; } 40% { top: 28%; } 70% { top: 38%; } 100% { left: 112%; top: 30%; }
+}
+#spooky .leaf {
+  position: absolute; top: -6%; width: 14px; height: 14px; border-radius: 0 80% 0 80%;
+  background: linear-gradient(135deg, #ffb347, #d9480f); opacity: 0.85;
+  animation: leaf-fall 11s linear infinite;
+}
+#spooky .l1 { left: 8%; animation-delay: 0s; }
+#spooky .l2 { left: 24%; animation-delay: 3.5s; animation-duration: 13s; background: linear-gradient(135deg, #e8a33d, #8a3c12); }
+#spooky .l3 { left: 41%; animation-delay: 7s; width: 10px; height: 10px; }
+#spooky .l4 { left: 58%; animation-delay: 1.8s; animation-duration: 14s; background: linear-gradient(135deg, #ffd27a, #c2410c); }
+#spooky .l5 { left: 73%; animation-delay: 5.2s; }
+#spooky .l6 { left: 88%; animation-delay: 9s; animation-duration: 12s; width: 11px; height: 11px; background: linear-gradient(135deg, #e8a33d, #8a3c12); }
+#spooky .l7 { left: 50%; animation-delay: 11s; animation-duration: 15s; }
+@keyframes leaf-fall {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  8% { opacity: 0.85; }
+  25% { transform: translate(28px, 28vh) rotate(110deg); }
+  50% { transform: translate(-22px, 55vh) rotate(220deg); }
+  75% { transform: translate(24px, 82vh) rotate(330deg); }
+  100% { transform: translate(-10px, 110vh) rotate(440deg); opacity: 0.6; }
+}
+#spooky .fog {
+  position: absolute; bottom: -8vh; width: 90vw; height: 34vh; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(200, 180, 255, 0.22), rgba(200, 180, 255, 0));
+  filter: blur(6px);
+}
+#spooky .f1 { left: -30vw; animation: fog-drift 26s ease-in-out infinite alternate; }
+#spooky .f2 { right: -35vw; bottom: -12vh; animation: fog-drift 34s ease-in-out infinite alternate-reverse; opacity: 0.8; }
+@keyframes fog-drift { from { transform: translateX(-6vw); } to { transform: translateX(22vw); } }
+
+/* ---------- typography & panels ---------- */
+[data-theme="halloween"] h2,
+[data-theme="halloween"] .sv-panel h2 {
+  font-family: "Creepster", "Fredoka", system-ui, sans-serif; font-weight: 400; letter-spacing: 0.04em;
+  color: #ff9a2e; text-shadow: 0 0 14px rgba(255, 120, 20, 0.55), 0 3px 0 #3a1200;
+}
+[data-theme="halloween"] .eyebrow { color: #c79bff; }
+[data-theme="halloween"] .panel {
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 138, 31, 0.12), 0 0 40px rgba(176, 108, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+[data-theme="halloween"] .screen:not(.clear) {
+  background: radial-gradient(120% 80% at 50% 0%, rgba(255, 120, 20, 0.16), transparent 60%), rgba(10, 4, 18, 0.62);
+}
+[data-theme="halloween"] .btn.primary {
+  color: #2a0e00; background: linear-gradient(135deg, #ffc46b, #ff8a1f 50%, #e8590c);
+  box-shadow: 0 10px 24px rgba(255, 110, 20, 0.4), 0 0 18px rgba(255, 140, 30, 0.35);
+}
+[data-theme="halloween"] .btn.ghost { background: rgba(176, 108, 255, 0.12); border-color: rgba(176, 108, 255, 0.35); }
+[data-theme="halloween"] .toggle input:checked + .track { background: var(--accent); }
+
+/* ---------- title ---------- */
+[data-theme="halloween"] #login-name {
+  background: rgba(30, 14, 44, 0.9); color: #ffe9cc; border-color: #ff8a1f;
+  box-shadow: 0 0 0 4px rgba(255, 138, 31, 0.18), 0 10px 26px rgba(0, 0, 0, 0.5);
+}
+[data-theme="halloween"] #login-name::placeholder { color: #a98bbf; }
+[data-theme="halloween"] .link-btn { background: rgba(40, 16, 60, 0.75); border-color: rgba(176, 108, 255, 0.55); box-shadow: 0 0 16px rgba(176, 108, 255, 0.25); }
+[data-theme="halloween"] .login-note { color: #e6d4f5; }
+
+/* ---------- chips & gear ---------- */
+[data-theme="halloween"] .player-chip,
+[data-theme="halloween"] .gear-btn.floating {
+  background: rgba(24, 10, 36, 0.72); border-color: rgba(255, 138, 31, 0.55);
+  box-shadow: 0 0 14px rgba(255, 138, 31, 0.25), 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+[data-theme="halloween"] .gear-btn.floating { color: #ffb347; }
+[data-theme="halloween"] .floaty { color: #ffcf8a; text-shadow: 0 0 12px rgba(255, 120, 20, 0.9), 0 2px 4px rgba(0, 0, 0, 0.8); }
+
+/* ---------- the three spooky game buttons ---------- */
+.hub-btn.hw {
+  --c: #ff8a1f; --c2: #ffd09a;
+  position: relative; overflow: visible;
+  font-family: "Creepster", "Fredoka", system-ui, sans-serif; font-weight: 400; font-size: 27px; letter-spacing: 0.06em;
+  color: var(--c2);
+  background: linear-gradient(180deg, rgba(44, 20, 62, 0.94), rgba(18, 8, 28, 0.96));
+  border: 3px solid var(--c);
+  text-shadow: 0 0 12px var(--c), 0 2px 0 #000;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--c) 55%, transparent), inset 0 0 22px color-mix(in srgb, var(--c) 28%, transparent), 0 10px 22px rgba(0, 0, 0, 0.55);
+  animation: pop-in 0.4s cubic-bezier(.2, .9, .3, 1.4) both, candle 3.2s ease-in-out infinite 0.5s;
+}
+.hub-btn.hw .hub-icon { font-size: 30px; filter: drop-shadow(0 0 8px var(--c)); }
+.hub-btn.hw.broom { --c: #b06cff; --c2: #ead6ff; }
+.hub-btn.hw.haunted { --c: #8be04e; --c2: #e4ffd0; }
+.hub-btn.hw.pumpkin { --c: #ff8a1f; --c2: #ffe0b8; }
+.hub-btn.hw:nth-child(2) { animation-delay: 0.08s, 1.4s; }
+.hub-btn.hw:nth-child(3) { animation-delay: 0.16s, 2.3s; }
+/* slime drips hanging off the bottom edge */
+.hub-btn.hw::after {
+  content: ""; position: absolute; left: 14%; right: 14%; bottom: -11px; height: 15px; pointer-events: none;
+  background:
+    radial-gradient(ellipse 5px 11px at 8% 0, var(--c) 92%, transparent 100%),
+    radial-gradient(ellipse 4px 7px at 27% 0, var(--c) 92%, transparent 100%),
+    radial-gradient(ellipse 6px 13px at 52% 0, var(--c) 92%, transparent 100%),
+    radial-gradient(ellipse 3.5px 6px at 71% 0, var(--c) 92%, transparent 100%),
+    radial-gradient(ellipse 5px 10px at 90% 0, var(--c) 92%, transparent 100%);
+  filter: drop-shadow(0 0 4px var(--c));
+}
+.hub-btn.hw:active { transform: translateY(3px) scale(0.98); }
+@keyframes candle {
+  0%, 100% { box-shadow: 0 0 18px color-mix(in srgb, var(--c) 55%, transparent), inset 0 0 22px color-mix(in srgb, var(--c) 28%, transparent), 0 10px 22px rgba(0, 0, 0, 0.55); }
+  45% { box-shadow: 0 0 28px color-mix(in srgb, var(--c) 80%, transparent), inset 0 0 28px color-mix(in srgb, var(--c) 40%, transparent), 0 10px 22px rgba(0, 0, 0, 0.55); }
+  55% { box-shadow: 0 0 12px color-mix(in srgb, var(--c) 40%, transparent), inset 0 0 18px color-mix(in srgb, var(--c) 22%, transparent), 0 10px 22px rgba(0, 0, 0, 0.55); }
+}
+[data-theme="halloween"] .hub-buttons.hw-only { gap: 22px; }
+@media (orientation: landscape) and (max-height: 600px) {
+  .hub-btn.hw { font-size: 21px; }
+  [data-theme="halloween"] .hub-buttons.hw-only { gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #spooky .bat, #spooky .leaf, #spooky .fog, .hub-btn.hw { animation: none !important; }
+}

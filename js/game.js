@@ -374,10 +374,20 @@
     4: { build: buildVetLevel, music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'], intro: true, survival: true },
   };
   const STORY_LEVELS = [1, 2, 3, 4];
-  const MENU_MUSIC = LEVELS[1].music;
+  // Menu music per event theme
+  const THEME_MUSIC = { normal: LEVELS[1].music, halloween: ['Halloween1.mp3'] };
+  const THEME_ART = {
+    normal: { bg: 'assets/main_bg.jpg', logo: 'assets/MiMaRo_logo.png' },
+    halloween: { bg: 'assets/main_bg_halloween.jpg', logo: 'assets/MiMaRo_logo_halloween_sm.png' },
+  };
+  // Screens that belong to the normal game; the Halloween event doesn't show them
+  const NORMAL_SCREENS = ['levels', 'cats', 'story', 'leaderboard'];
 
   // Device settings
   let orientation = store.get('orient', 'portrait');   // every game is played in this orientation
+  let theme = store.get('theme', 'halloween');          // 'halloween' (default during the event) or 'normal'
+  if (!THEME_MUSIC[theme]) theme = 'halloween';
+  const menuMusic = () => THEME_MUSIC[theme];
 
   function applyView() {
     const v = level.views[orientation] || level.views.portrait;
@@ -2928,13 +2938,14 @@
     $('hud').classList.add('hidden');
     checkOrientation();
     releaseOrientation();
-    setPlaylist(MENU_MUSIC);
+    setPlaylist(menuMusic());
   }
 
   // Back from a level to where it was started from
   function backToMenu() {
     stopRun();
-    if (game.mode === 'story') openStory();
+    if (theme === 'halloween') goHub();
+    else if (game.mode === 'story') openStory();
     else showLevels();
   }
 
@@ -3014,7 +3025,7 @@
   // Settings travel with the account, so they follow the player to other devices.
   function saveSettings() {
     if (!Profile.current) return;
-    Profile.set('settings', { lang: I18N.lang, orient: orientation, gf: gfMode, directAim, muted: audio.muted });
+    Profile.set('settings', { lang: I18N.lang, orient: orientation, gf: gfMode, directAim, muted: audio.muted, theme });
   }
 
   function loadAccountSettings() {
@@ -3025,13 +3036,14 @@
     if (st.gf != null) { gfMode = !!st.gf; store.set('gfMode', gfMode); }
     if (st.directAim != null) setDirectAim(!!st.directAim);
     if (st.muted != null && st.muted !== audio.muted) setMuted(!!st.muted);
+    if (st.theme) setTheme(st.theme);
   }
 
   function goHub() {
     if (survivor && survivor.active) survivor.quit();
     refreshHub();
     showScreen('hub');
-    setPlaylist(MENU_MUSIC);
+    setPlaylist(menuMusic());
   }
 
   function refreshHub() {
@@ -3061,6 +3073,7 @@
       plop(b);
       const go = b.dataset.go;
       if (go === 'casino') { floatText(b, tr('hub.dev')); return; }
+      if (go.startsWith('hw-')) { floatText(b, tr('hw.soon')); return; }   // the Halloween games come next
       b.classList.add('busy');
       setTimeout(() => {
         b.classList.remove('busy');
@@ -3262,12 +3275,33 @@
   function syncSettings() {
     document.querySelectorAll('#set-lang button').forEach((b) => b.classList.toggle('active', b.dataset.lang === I18N.lang));
     document.querySelectorAll('#set-orient button').forEach((b) => b.classList.toggle('active', b.dataset.orient === orientation));
+    document.querySelectorAll('#set-theme button').forEach((b) => b.classList.toggle('active', b.dataset.themeBtn === theme));
     $('opt-sound').checked = !audio.muted;
     $('opt-invert').checked = directAim;
     $('opt-gf').checked = gfMode;
     const p = Profile.current;
     $('settings-player').textContent = !p ? '' : p.guest ? tr('settings.guest') : tr('settings.player', { name: p.name });
     $('btn-switch').classList.toggle('hidden', !p);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Event theme (Halloween / normal)
+  // ---------------------------------------------------------------------------
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', theme);
+    $('logo').src = THEME_ART[theme].logo;
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'halloween' ? '#1a0d26' : '#5b3a29');
+  }
+
+  function setTheme(t) {
+    if (t === theme || !THEME_MUSIC[t]) return;
+    theme = t;
+    store.set('theme', t);
+    applyTheme();
+    const inGame = game.running || (survivor && survivor.active);
+    if (!inGame) setPlaylist(menuMusic());
+    if (theme === 'halloween' && NORMAL_SCREENS.includes(currentScreen)) goHub();
+    else if (currentScreen === 'hub') refreshHub();
   }
 
   function setOrientation(o) {
@@ -3290,6 +3324,9 @@
   document.querySelectorAll('#set-orient button').forEach((b) => b.addEventListener('click', () => {
     plop(); setOrientation(b.dataset.orient); syncSettings(); saveSettings();
   }));
+  document.querySelectorAll('#set-theme button').forEach((b) => b.addEventListener('click', () => {
+    plop(); setTheme(b.dataset.themeBtn); syncSettings(); saveSettings();
+  }));
   $('opt-sound').addEventListener('change', (e) => { setMuted(!e.target.checked); if (survivor) survivor.syncSound(); saveSettings(); });
   $('opt-invert').addEventListener('change', (e) => { setDirectAim(e.target.checked); saveSettings(); });
   $('opt-invert-2').addEventListener('change', (e) => { setDirectAim(e.target.checked); saveSettings(); });
@@ -3301,7 +3338,7 @@
     if (game.running) stopRun();
     if (survivor && survivor.active) survivor.quit();
     Profile.logout();
-    setPlaylist(MENU_MUSIC);
+    setPlaylist(menuMusic());
     showTitle();
   });
 
@@ -3361,7 +3398,7 @@
       canvas, ctx, view, sprites, CATS, audio, formatTime,
       store: Profile,   // fish coins, Cat Tree and records belong to the player's account
       setPlaylist, showScreen, setMuted,
-      toLevels: () => { stopRun(); showLevels(); },
+      toLevels: () => { stopRun(); if (theme === 'halloween') goHub(); else showLevels(); },
       blocked: () => wrongOrientation,
       gfMode: () => gfMode,
       onRunChange: checkOrientation,
@@ -3400,8 +3437,8 @@
       sprites[k] = sprites[k] || {};
       for (const pose of POSE_FILES) jobs.push(() => loadImage(c.dir + c.prefix + pose + '.png').then((im) => { sprites[k][pose] = im; }));
     }
-    jobs.push(() => loadImage('assets/main_bg.jpg'));
-    jobs.push(() => loadImage('assets/MiMaRo_logo.png'));
+    jobs.push(() => loadImage(THEME_ART[theme].bg));
+    jobs.push(() => loadImage(THEME_ART[theme].logo));
     if (document.fonts && document.fonts.ready) jobs.push(() => document.fonts.ready);
     let done = 0;
     await Promise.all(jobs.map((j) => j().then(() => { done++; setLoadProgress(done / jobs.length * 0.95); })));
@@ -3432,7 +3469,9 @@
   $('ios-tip').classList.toggle('hidden', !isIOS || fsSupported);
   setDirectAim(directAim);
   $('opt-gf').checked = gfMode;
+  applyTheme();
   initAudio();
+  setPlaylist(menuMusic());
   setMuted(audio.muted);
   loadAll().then(playIntro);
   requestAnimationFrame(frame);
