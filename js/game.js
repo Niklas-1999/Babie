@@ -3109,7 +3109,11 @@
     $('secret').classList.remove('hidden');
     if (uiSfx) uiSfx.chest();
   });
-  function closeSecret() { stopLetter(); $('secret').classList.add('hidden'); }
+  function closeSecret() {
+    stopLetter();
+    $('secret').classList.add('hidden');
+    if (audio.playlist === SECRET_SONG) setPlaylist(menuMusic());
+  }
   $('btn-secret-close').addEventListener('click', () => { plop(); closeSecret(); });
   $('secret').addEventListener('click', (e) => { if (e.target === $('secret')) closeSecret(); });
 
@@ -3135,6 +3139,7 @@
     ['sign', 'deine Ameise :*'],
   ];
   const LETTER_SPEED = 26;   // px per second
+  const SECRET_SONG = ['secret_ending.mp3'];   // starts with the letter, plays until the picture is closed
   let letterOn = false;
 
   const letterFor = () => !Profile.guest && Profile.current && LETTER_KEYS.includes(Profile.current.key);
@@ -3173,6 +3178,8 @@
     if (!letterFor()) return;
     $('secret-tap').classList.add('hidden');
     startLetter();
+    if (audio.playlist === SECRET_SONG) { audio.music.currentTime = 0; playMusic(); }
+    else setPlaylist(SECRET_SONG);
   });
   $('secret-letter').addEventListener('click', stopLetter);
   $('letter-roll').addEventListener('animationend', stopLetter);
