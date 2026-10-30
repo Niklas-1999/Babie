@@ -3093,6 +3093,7 @@
     $('secret-lock').textContent = open ? '\uD83D\uDDBC\uFE0F' : '\uD83D\uDD12';
   }
 
+  const SECRET_SONG = ['secret_ending.mp3'];   // plays while the secret picture is open
   $('btn-secret').addEventListener('click', () => {
     const b = $('btn-secret');
     const total = Profile.get('hwCorn', 0) || 0;
@@ -3107,6 +3108,7 @@
     stopLetter();
     $('secret-tap').classList.toggle('hidden', !letterFor());
     $('secret').classList.remove('hidden');
+    setPlaylist(SECRET_SONG);
     if (uiSfx) uiSfx.chest();
   });
   function closeSecret() {
@@ -3139,7 +3141,6 @@
     ['sign', 'deine Ameise :*'],
   ];
   const LETTER_SPEED = 26;   // px per second
-  const SECRET_SONG = ['secret_ending.mp3'];   // starts with the letter, plays until the picture is closed
   let letterOn = false;
 
   const letterFor = () => !Profile.guest && Profile.current && LETTER_KEYS.includes(Profile.current.key);
@@ -3178,8 +3179,6 @@
     if (!letterFor()) return;
     $('secret-tap').classList.add('hidden');
     startLetter();
-    if (audio.playlist === SECRET_SONG) { audio.music.currentTime = 0; playMusic(); }
-    else setPlaylist(SECRET_SONG);
   });
   $('secret-letter').addEventListener('click', stopLetter);
   $('letter-roll').addEventListener('animationend', stopLetter);
