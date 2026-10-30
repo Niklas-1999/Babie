@@ -3104,11 +3104,78 @@
       return;
     }
     $('secret-img').src = 'assets/secret_halloween_ending_web.jpg';
+    stopLetter();
+    $('secret-tap').classList.toggle('hidden', !letterFor());
     $('secret').classList.remove('hidden');
     if (uiSfx) uiSfx.chest();
   });
-  $('btn-secret-close').addEventListener('click', () => { plop(); $('secret').classList.add('hidden'); });
-  $('secret').addEventListener('click', (e) => { if (e.target === $('secret')) $('secret').classList.add('hidden'); });
+  function closeSecret() { stopLetter(); $('secret').classList.add('hidden'); }
+  $('btn-secret-close').addEventListener('click', () => { plop(); closeSecret(); });
+  $('secret').addEventListener('click', (e) => { if (e.target === $('secret')) closeSecret(); });
+
+  // A letter that rolls up over the dimmed picture, only for these two accounts
+  const LETTER_KEYS = ['mimaro', 'niklas'];
+  const LETTER = [
+    ['hello', 'Hallo mein Babiebärchen,'],
+    ['p', 'herzlichen Glückwunsch, 200 Süßigkeiten zu sammeln war bestimmt anstrengend.'],
+    ['p', 'Vor genau 2 jahren haben wir uns das aller erste mal unterhalten.'],
+    ['p', 'Ich weis noch ganz genau, wie unser erstes Gespräch darüber ging, dass ich eine gewichtete Decke haben wollte, und dass du mir empfohlen hast eine ADHS Diagnose zu bekommen.'],
+    ['p', 'Und nichtmal 2 monate später hast du mir dann eine gewichtete Decke geschenkt.'],
+    ['p', 'Das ist glaube ich ein sehr gutes beispiel dafür was für eine Aufmerksame und liebevolle Person du bist.'],
+    ['p', 'Du merkst dir alles, du bedenkst alles, jemand muss nur ein mal etwas erwähnen und du behälst es im kopf.'],
+    ['p', 'Du bist eine so mitfühlende und empathievolle Person, bitte verliere dass nie.'],
+    ['sep', '🎃'],
+    ['p', 'Diese letzten 2 Jahre waren eine wirkliche Achterbahn der Gefühle.'],
+    ['p', 'Es gab viele streitigkeiten zwischen uns, viel Wut, aber auch sehr viele Liebe und Zuneigung, und ich schätze die Zeit mit dir extrem.'],
+    ['p', 'Deine Liebevolle und Positive art hat mein Leben sehr beeinflusst, und ich glaube ich bin durch dich zu einem besseren menschen geworden.'],
+    ['p', 'Was ich im Endeffekt damit sagen will, du bist so eine wundervolle Person, und ich hoffe dass, egal was das Leben dir bringt, du nie diese Positive Energie und dein Strahlen verlieren wirst.'],
+    ['p', 'Die Letzten 2 Jahre bedeuten mir so viel, und ich hoffe es kommen noch viele weitere dazu.'],
+    ['love', 'Ich liebe dich mein Schatz. ❤️'],
+    ['boo', 'Happy Halloween'],
+    ['sign', 'deine Ameise :*'],
+  ];
+  const LETTER_SPEED = 26;   // px per second
+  let letterOn = false;
+
+  const letterFor = () => !Profile.guest && Profile.current && LETTER_KEYS.includes(Profile.current.key);
+
+  function startLetter() {
+    const roll = $('letter-roll');
+    roll.innerHTML = '';
+    for (const [cls, text] of LETTER) {
+      const el = document.createElement('p');
+      el.className = 'l-' + cls;
+      el.textContent = text;
+      roll.appendChild(el);
+    }
+    letterOn = true;
+    $('secret').classList.add('letter');
+    $('secret-letter').classList.remove('hidden');
+    // start just below the screen, end just above it
+    const box = $('secret-letter').clientHeight;
+    const dist = box + roll.offsetHeight;
+    roll.style.animation = 'none';
+    roll.style.setProperty('--from', box + 'px');
+    roll.style.setProperty('--to', -roll.offsetHeight + 'px');
+    void roll.offsetWidth;
+    roll.style.animation = `letter-roll ${(dist / LETTER_SPEED).toFixed(1)}s linear 1.2s both`;
+  }
+
+  function stopLetter() {
+    if (!letterOn) return;
+    letterOn = false;
+    $('secret').classList.remove('letter');
+    $('secret-letter').classList.add('hidden');
+    $('letter-roll').style.animation = 'none';
+  }
+
+  $('secret-img').addEventListener('click', () => {
+    if (!letterFor()) return;
+    $('secret-tap').classList.add('hidden');
+    startLetter();
+  });
+  $('secret-letter').addEventListener('click', stopLetter);
+  $('letter-roll').addEventListener('animationend', stopLetter);
   $('btn-hw-lb').addEventListener('click', () => { plop($('btn-hw-lb')); setTimeout(openLeaderboard, 200); });
 
   document.querySelectorAll('.hub-btn').forEach((b) => {

@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" href="assets/Mallow/mallow_sitting.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Dancing+Script:wght@600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script>
     // Theme before first paint, so even the loading screen is in the right mode (Halloween by default)
@@ -471,8 +471,10 @@
       <p class="eyebrow" data-i18n="hw.secretUnlocked">Unlocked!</p>
       <h2 data-i18n="hw.secret">Secret Picture</h2>
       <div class="secret-frame"><img id="secret-img" src="" alt=""></div>
+      <p class="secret-tap hidden" id="secret-tap">💌 Tippe nochmal auf das Bild</p>
       <button class="btn primary" id="btn-secret-close" data-i18n="close">Close</button>
     </div>
+    <div class="secret-letter hidden" id="secret-letter"><div class="letter-roll" id="letter-roll"></div></div>
   </section>
 
   <!-- Settings (on top of everything) -->
