@@ -92,8 +92,9 @@
     <div class="player-chip" id="player-chip">
       <span class="player-paw">&#128062;</span>
       <span class="player-name" id="player-name"></span>
-      <span class="player-coins"><i class="coin-ico"></i><span id="player-coins">0</span></span>
-      <span class="player-coins fish"><span class="fish-ico">&#128176;</span><span id="player-fish">0</span></span>
+      <span class="player-coins normal-only"><i class="coin-ico"></i><span id="player-coins">0</span></span>
+      <span class="player-coins fish normal-only"><span class="fish-ico">&#128176;</span><span id="player-fish">0</span></span>
+      <span class="player-coins corn hw-inline"><i class="corn-ico"></i><span id="player-corn">0</span></span>
     </div>
     <div class="hub-menu">
       <button class="btn small ghost hub-continue normal-only hidden" id="btn-continue"></button>
@@ -102,6 +103,14 @@
         <button class="hub-btn hw broom" data-go="hw-broom"><span class="hub-icon">&#129529;</span><span data-i18n="hw.broom">Broom Ride</span></button>
         <button class="hub-btn hw haunted" data-go="hw-haunted"><span class="hub-icon">&#128123;</span><span data-i18n="hw.haunted">Haunted House</span></button>
         <button class="hub-btn hw pumpkin" data-go="hw-pumpkin"><span class="hub-icon">&#127875;</span><span data-i18n="hw.pumpkin">Pumpkin Patch</span></button>
+      </div>
+      <div class="hw-extra hw-only-flex">
+        <button class="hw-small" id="btn-hw-lb"><span>&#127942;</span><span data-i18n="hub.leaderboards">Leaderboards</span></button>
+        <button class="hw-small hw-secret" id="btn-secret">
+          <span class="hw-secret-top"><span class="hw-lock" id="secret-lock">&#128274;</span><span data-i18n="hw.secret">Secret Picture</span></span>
+          <span class="hw-secret-bar"><i id="secret-fill"></i></span>
+          <span class="hw-secret-count"><i class="corn-ico"></i><span id="secret-count">0 / 200</span></span>
+        </button>
       </div>
       <div class="hub-buttons normal-only">
         <button class="hub-btn minigames" data-go="minigames"><span class="hub-icon">&#127918;</span><span data-i18n="hub.minigames">Minigames</span></button>
@@ -207,9 +216,15 @@
   <section id="leaderboard" class="screen hidden">
     <div class="panel lb-panel">
       <h2 data-i18n="lb.title">Leaderboards</h2>
-      <div class="seg" id="lb-tabs">
+      <div class="seg normal-only" id="lb-tabs">
         <button data-tab="levels" class="active" data-i18n="lb.levels">Best times</button>
         <button data-tab="coins" data-i18n="lb.coins">Most coins</button>
+      </div>
+      <div class="seg lb-hw-tabs" id="lb-hw-tabs">
+        <button data-hw="hw-broom" class="active">&#129529;</button>
+        <button data-hw="hw-haunted">&#128123;</button>
+        <button data-hw="hw-pumpkin">&#127875;</button>
+        <button data-hw="hw-corn"><i class="corn-ico"></i></button>
       </div>
       <div class="lb-levels" id="lb-level-tabs">
         <button data-lb="1" class="active">1</button>
@@ -398,6 +413,68 @@
     </div>
   </section>
 
+  <!-- Halloween minigames: HUD -->
+  <div id="hw-hud" class="hidden">
+    <div class="hw-top">
+      <div class="hw-chips">
+        <div class="sv-chip"><span class="sv-chip-icon">&#11088;</span><span id="hw-score">0</span></div>
+        <div class="sv-chip"><i class="corn-ico"></i><span id="hw-corn">0</span></div>
+      </div>
+      <div class="hw-info" id="hw-info"></div>
+      <div class="sv-buttons">
+        <button class="icon-btn" id="hw-btn-sound" aria-label="Mute"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <button class="icon-btn gear-btn" data-i18n-aria="settings.title" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.4 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.9h4l.4-2.9a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
+        <button class="icon-btn" id="hw-btn-pause" aria-label="Pause"><svg viewBox="0 0 24 24" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg></button>
+      </div>
+    </div>
+    <div id="hw-hint-wrap" class="hint"><div class="hint-hand"></div><span id="hw-hint"></span></div>
+  </div>
+
+  <!-- Halloween minigames: pause -->
+  <section id="hw-pause" class="screen hidden">
+    <div class="panel small">
+      <h2 data-i18n="pause.title">Paused</h2>
+      <div class="actions col">
+        <button class="btn primary" id="hw-resume" data-i18n="pause.resume">Resume</button>
+        <button class="btn ghost" id="hw-restart" data-i18n="pause.restart">Restart</button>
+        <button class="btn ghost" id="hw-quit" data-i18n="hw.menu">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Halloween minigames: results -->
+  <section id="hw-over" class="screen hidden">
+    <div class="panel">
+      <p class="eyebrow" id="hw-over-eyebrow"></p>
+      <h2 id="hw-over-title"></h2>
+      <div class="win-cat"><img id="hw-o-img" src="" alt=""></div>
+      <div class="stats">
+        <div><span class="stat-val" id="hw-o-score">0</span><span class="stat-label" data-i18n="hw.score">Score</span></div>
+        <div><span class="stat-val" id="hw-o-best">0</span><span class="stat-label" data-i18n="hw.best">Best</span></div>
+        <div><span class="stat-val corn-val"><i class="corn-ico"></i><span id="hw-o-corn">0</span></span><span class="stat-label" data-i18n="hw.cornShort">Candy corn</span></div>
+      </div>
+      <p class="best" id="hw-o-note"></p>
+      <div class="hw-o-secret">
+        <span class="hw-secret-bar"><i id="hw-o-secret-fill"></i></span>
+        <span class="hw-o-secret-text" id="hw-o-secret-text"></span>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="hw-over-hub" data-i18n="hw.menu">Menu</button>
+        <button class="btn primary" id="hw-again" data-i18n="sv.again">Again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- The secret picture -->
+  <section id="secret" class="screen hidden">
+    <div class="secret-wrap">
+      <p class="eyebrow" data-i18n="hw.secretUnlocked">Unlocked!</p>
+      <h2 data-i18n="hw.secret">Secret Picture</h2>
+      <div class="secret-frame"><img id="secret-img" src="" alt=""></div>
+      <button class="btn primary" id="btn-secret-close" data-i18n="close">Close</button>
+    </div>
+  </section>
+
   <!-- Settings (on top of everything) -->
   <section id="settings" class="screen hidden">
     <div class="panel small settings-panel">
@@ -472,6 +549,10 @@
   <script src="js/survivor/art.js"></script>
   <script src="js/survivor/audio.js"></script>
   <script src="js/survivor/core.js"></script>
+  <script src="js/halloween/hw.js"></script>
+  <script src="js/halloween/broom.js"></script>
+  <script src="js/halloween/haunted.js"></script>
+  <script src="js/halloween/pumpkin.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

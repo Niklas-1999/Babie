@@ -381,7 +381,7 @@
     halloween: { bg: 'assets/main_bg_halloween.jpg', logo: 'assets/MiMaRo_logo_halloween_sm.png' },
   };
   // Screens that belong to the normal game; the Halloween event doesn't show them
-  const NORMAL_SCREENS = ['levels', 'cats', 'story', 'leaderboard'];
+  const NORMAL_SCREENS = ['levels', 'cats', 'story', 'leaderboard'];   // switching event from these goes back to the hub
 
   // Device settings
   let orientation = store.get('orient', 'portrait');   // every game is played in this orientation
@@ -430,7 +430,7 @@
   function checkOrientation() {
     const portrait = window.innerHeight >= window.innerWidth;
     const want = orientation;
-    const playing = (game.running && !game.wonAt && !game.over) || (survivor && survivor.running);
+    const playing = (game.running && !game.wonAt && !game.over) || (survivor && survivor.running) || (hw && hw.running);
     wrongOrientation = isTouch && playing && portrait !== (want === 'portrait');
     const el = $('rotate');
     el.classList.toggle('hidden', !wrongOrientation);
@@ -696,6 +696,12 @@
   const floaters = [];   // "+1" coin popups
   let accumulator = 0;
   let survivor = null;   // Backyard Survivors, created at boot
+  let hw = null;         // Halloween minigames, created at boot
+  // Halloween costume sprites: Mischko has 3 walking frames, Mallow 2; walking 1 doubles as idle
+  const HW_WALK = { mallow: 2, mischko: 3 };
+  const HW_POSES = ['sitting', 'jump', 'falling', 'landing', 'hit'];
+  const hwSprites = {};
+  const hwPath = (key, pose) => CATS[key].dir + 'halloween/sm/' + CATS[key].prefix + pose + '_halloween.png';
   let directAim = !!store.get('directAim', false);
   let gfMode = !!store.get('gfMode', false); // infinite lives
 
@@ -2833,6 +2839,11 @@
       requestAnimationFrame(frame);
       return;
     }
+    if (hw && hw.active) {
+      hw.frame(dt);
+      requestAnimationFrame(frame);
+      return;
+    }
     if (game.running && !game.paused && !wrongOrientation) {
       accumulator += dt;
       while (accumulator >= STEP) {
@@ -2890,7 +2901,7 @@
   let gearShown = null;
   function updateGear() {
     const show = $('loading').classList.contains('hidden') && (wrongOrientation ||
-      ($('hud').classList.contains('hidden') && $('sv-hud').classList.contains('hidden')));
+      ($('hud').classList.contains('hidden') && $('sv-hud').classList.contains('hidden') && $('hw-hud').classList.contains('hidden')));
     if (show !== gearShown) { gearShown = show; $('btn-settings').classList.toggle('hidden', !show); }
   }
 
@@ -3041,6 +3052,7 @@
 
   function goHub() {
     if (survivor && survivor.active) survivor.quit();
+    if (hw && hw.active) hw.quit();
     refreshHub();
     showScreen('hub');
     setPlaylist(menuMusic());
@@ -3051,6 +3063,7 @@
     $('player-coins').textContent = Profile.get('coins', 0);
     $('player-fish').textContent = Profile.get('svCoins', 0);
     $('player-chip').classList.toggle('guest', Profile.guest);
+    refreshSecret();
     const save = Profile.get('save', null);
     const cont = $('btn-continue');
     if (save && CATS[save.cat] && LEVELS[save.level]) {
@@ -3065,7 +3078,38 @@
     if (currentScreen !== 'hub') return;
     $('player-coins').textContent = Profile.get('coins', 0);
     $('player-fish').textContent = Profile.get('svCoins', 0);
+    refreshSecret();
   });
+
+  // Secret picture: unlocked by collecting candy corn in the Halloween games
+  function refreshSecret() {
+    const total = Profile.get('hwCorn', 0) || 0;
+    const cost = window.HW.SECRET_COST;
+    $('player-corn').textContent = total;
+    $('secret-count').textContent = Math.min(total, cost) + ' / ' + cost;
+    $('secret-fill').style.width = (Math.min(1, total / cost) * 100).toFixed(1) + '%';
+    const open = total >= cost;
+    $('btn-secret').classList.toggle('unlocked', open);
+    $('secret-lock').textContent = open ? '\uD83D\uDDBC\uFE0F' : '\uD83D\uDD12';
+  }
+
+  $('btn-secret').addEventListener('click', () => {
+    const b = $('btn-secret');
+    const total = Profile.get('hwCorn', 0) || 0;
+    const cost = window.HW.SECRET_COST;
+    plop(b);
+    if (total < cost) {
+      b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
+      floatText(b, tr('hw.secretLocked', { n: cost - total }));
+      return;
+    }
+    $('secret-img').src = 'assets/secret_halloween_ending_web.jpg';
+    $('secret').classList.remove('hidden');
+    if (uiSfx) uiSfx.chest();
+  });
+  $('btn-secret-close').addEventListener('click', () => { plop(); $('secret').classList.add('hidden'); });
+  $('secret').addEventListener('click', (e) => { if (e.target === $('secret')) $('secret').classList.add('hidden'); });
+  $('btn-hw-lb').addEventListener('click', () => { plop($('btn-hw-lb')); setTimeout(openLeaderboard, 200); });
 
   document.querySelectorAll('.hub-btn').forEach((b) => {
     b.addEventListener('click', () => {
@@ -3073,7 +3117,7 @@
       plop(b);
       const go = b.dataset.go;
       if (go === 'casino') { floatText(b, tr('hub.dev')); return; }
-      if (go.startsWith('hw-')) { floatText(b, tr('hw.soon')); return; }   // the Halloween games come next
+      if (go.startsWith('hw-')) { b.classList.add('busy'); setTimeout(() => { b.classList.remove('busy'); pickCat({ mode: 'hw', game: go.slice(3) }); }, 240); return; }
       b.classList.add('busy');
       setTimeout(() => {
         b.classList.remove('busy');
@@ -3110,7 +3154,11 @@
   function pickCat(p) {
     pending = p;
     $('cats-eyebrow').textContent = p.mode === 'story' ? tr('story.title')
+      : p.mode === 'hw' ? tr('hw.' + p.game)
       : tr(p.level === 'sv' ? 'level.sv.name' : 'level.' + p.level + '.name');
+    document.querySelectorAll('.cat-card').forEach((el) => {
+      el.querySelector('img').src = catImage(el.dataset.cat, 'sitting', p.mode === 'hw');
+    });
     const story = Profile.get('story', {});
     for (const key of Object.keys(CATS)) {
       $('cat-progress-' + key).textContent = p.mode === 'story' ? Math.min(story[key] || 0, STORY_LEVELS.length) + ' / ' + STORY_LEVELS.length : '';
@@ -3134,14 +3182,20 @@
       const p = pending;
       setTimeout(() => {
         if (p.mode === 'story') openStory();
+        else if (p.mode === 'hw') { if (hw) hw.start(p.game, game.catKey); }
         else if (p.level === 'sv') { if (survivor) { showScreen(null); survivor.openLobby(); } }
         else startGame(game.catKey, p.level, null, 'mini');
       }, 200);
     });
   });
   $('btn-cats-back').addEventListener('click', () => {
-    if (pending && pending.mode === 'story') goHub(); else showLevels();
+    if (pending && (pending.mode === 'story' || pending.mode === 'hw')) goHub(); else showLevels();
   });
+
+  function catImage(key, pose, costume) {
+    if (costume) return hwPath(key, pose);
+    return CATS[key].dir + CATS[key].prefix + pose + '.png';
+  }
 
   // ---------------------------------------------------------------------------
   // Story: levels 1-4 in order, each cat has its own progress
@@ -3185,7 +3239,12 @@
     4: { field: 'best4.score', dir: 'asc', rec: 'best4' },
     sv: { field: 'svBest.time', dir: 'desc', rec: 'svBest' },
     coins: { field: 'coins', dir: 'desc' },
+    'hw-broom': { field: 'hwBroom.score', dir: 'desc', rec: 'hwBroom' },
+    'hw-haunted': { field: 'hwHaunted.score', dir: 'desc', rec: 'hwHaunted' },
+    'hw-pumpkin': { field: 'hwPumpkin.score', dir: 'desc', rec: 'hwPumpkin' },
+    'hw-corn': { field: 'hwCorn', dir: 'desc' },
   };
+  let lbHw = 'hw-broom';
   let lbTab = 'levels';
   let lbLevel = '1';
   const lbCache = {};
@@ -3200,11 +3259,14 @@
   function renderLbTabs() {
     document.querySelectorAll('#lb-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === lbTab));
     document.querySelectorAll('#lb-level-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.lb === lbLevel));
-    $('lb-level-tabs').classList.toggle('hidden', lbTab !== 'levels');
+    $('lb-level-tabs').classList.toggle('hidden', lbTab !== 'levels' || theme === 'halloween');
+    document.querySelectorAll('#lb-hw-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.hw === lbHw));
   }
 
   function lbValue(id, row) {
     if (id === 'coins') return '<i class="coin-ico"></i>' + (row.coins || 0).toLocaleString();
+    if (id === 'hw-corn') return '<i class="corn-ico"></i>' + (row.hwCorn || 0).toLocaleString();
+    if (id.startsWith('hw-')) return ((row[LB[id].rec] || {}).score || 0).toLocaleString();
     const r = row[LB[id].rec] || {};
     if (id === 'sv') return formatTime(r.time || 0, false);
     if (id === '4') return hitsText(r.hits || 0) + ' · ' + formatTime(r.time || 0, false);
@@ -3212,9 +3274,10 @@
   }
 
   async function loadLb() {
-    const id = lbTab === 'coins' ? 'coins' : lbLevel;
+    const id = theme === 'halloween' ? lbHw : lbTab === 'coins' ? 'coins' : lbLevel;
     const cfg = LB[id];
-    $('lb-caption').textContent = id === 'coins' ? tr('lb.coins') : tr(id === 'sv' ? 'level.sv.name' : 'level.' + id + '.name');
+    $('lb-caption').textContent = id === 'hw-corn' ? tr('hw.lb.corn') : id.startsWith('hw-') ? tr('hw.' + id.slice(3))
+      : id === 'coins' ? tr('lb.coins') : tr(id === 'sv' ? 'level.sv.name' : 'level.' + id + '.name');
     $('lb-note').textContent = Profile.guest ? tr('lb.guestNote') : '';
     const list = $('lb-list');
     const req = ++lbReq;
@@ -3253,6 +3316,9 @@
   document.querySelectorAll('#lb-tabs button').forEach((b) => b.addEventListener('click', () => {
     plop(); lbTab = b.dataset.tab; renderLbTabs(); loadLb();
   }));
+  document.querySelectorAll('#lb-hw-tabs button').forEach((b) => b.addEventListener('click', () => {
+    plop(); lbHw = b.dataset.hw; renderLbTabs(); loadLb();
+  }));
   document.querySelectorAll('#lb-level-tabs button').forEach((b) => b.addEventListener('click', () => {
     plop(); lbLevel = b.dataset.lb; renderLbTabs(); loadLb();
   }));
@@ -3264,6 +3330,7 @@
   function openSettings() {
     if (game.running && !game.paused && !game.wonAt && !game.over) pause();
     if (survivor) survivor.pause();
+    if (hw) hw.pause();
     syncSettings();
     $('settings').classList.remove('hidden');
   }
@@ -3300,7 +3367,7 @@
     applyTheme();
     const inGame = game.running || (survivor && survivor.active);
     if (!inGame) setPlaylist(menuMusic());
-    if (theme === 'halloween' && NORMAL_SCREENS.includes(currentScreen)) goHub();
+    if (NORMAL_SCREENS.includes(currentScreen)) goHub();
     else if (currentScreen === 'hub') refreshHub();
   }
 
@@ -3327,7 +3394,7 @@
   document.querySelectorAll('#set-theme button').forEach((b) => b.addEventListener('click', () => {
     plop(); setTheme(b.dataset.themeBtn); syncSettings(); saveSettings();
   }));
-  $('opt-sound').addEventListener('change', (e) => { setMuted(!e.target.checked); if (survivor) survivor.syncSound(); saveSettings(); });
+  $('opt-sound').addEventListener('change', (e) => { setMuted(!e.target.checked); if (survivor) survivor.syncSound(); if (hw) hw.syncSound(); saveSettings(); });
   $('opt-invert').addEventListener('change', (e) => { setDirectAim(e.target.checked); saveSettings(); });
   $('opt-invert-2').addEventListener('change', (e) => { setDirectAim(e.target.checked); saveSettings(); });
   $('opt-gf').addEventListener('change', (e) => { gfMode = e.target.checked; store.set('gfMode', gfMode); updateHud(true); saveSettings(); });
@@ -3337,6 +3404,7 @@
     closeSettings();
     if (game.running) stopRun();
     if (survivor && survivor.active) survivor.quit();
+    if (hw && hw.active) hw.quit();
     Profile.logout();
     setPlaylist(menuMusic());
     showTitle();
@@ -3352,6 +3420,8 @@
     if (game.running) updateHud(true);
     checkOrientation();
     if (survivor) survivor.onLanguage();
+    if (hw) hw.onLanguage();
+    if (currentScreen === 'hub') refreshSecret();
   });
 
   // ---------------------------------------------------------------------------
@@ -3409,6 +3479,20 @@
     $('sv-card').classList.add('hidden');
   }
 
+  try {
+    hw = window.HW && window.HW.create({
+      canvas, ctx, view, audio, store: Profile, sfx: uiSfx, hwSprites,
+      setPlaylist, showScreen, setMuted,
+      toHub: () => goHub(),
+      blocked: () => wrongOrientation,
+      gfMode: () => gfMode,
+      onRunChange: checkOrientation,
+      catImage: (key, pose) => catImage(key, pose, true),
+    });
+  } catch (e) {
+    console.error('Halloween games failed to start', e);
+  }
+
   // ---------------------------------------------------------------------------
   // Loading: a cat walks along the bar while everything loads
   // ---------------------------------------------------------------------------
@@ -3436,6 +3520,14 @@
     for (const [k, c] of Object.entries(CATS)) {
       sprites[k] = sprites[k] || {};
       for (const pose of POSE_FILES) jobs.push(() => loadImage(c.dir + c.prefix + pose + '.png').then((im) => { sprites[k][pose] = im; }));
+    }
+    for (const k of Object.keys(CATS)) {
+      const set = (hwSprites[k] = { walk: [] });
+      for (let i = 1; i <= HW_WALK[k]; i++) {
+        const idx = i - 1;
+        jobs.push(() => loadImage(hwPath(k, 'walking_' + i)).then((im) => { set.walk[idx] = im; if (idx === 0) set.idle = im; }));
+      }
+      for (const pose of HW_POSES) jobs.push(() => loadImage(hwPath(k, pose)).then((im) => { set[pose] = im; }));
     }
     jobs.push(() => loadImage(THEME_ART[theme].bg));
     jobs.push(() => loadImage(THEME_ART[theme].logo));
@@ -3477,5 +3569,5 @@
   requestAnimationFrame(frame);
 
   // debug hook for testing in the console
-  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight, survivor, Profile };
+  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight, survivor, hw, Profile };
 })();

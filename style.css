@@ -990,3 +990,76 @@ h2 { font-size: 32px; margin-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) {
   #spooky .bat, #spooky .leaf, #spooky .fog, .hub-btn.hw { animation: none !important; }
 }
+
+/* ---------- candy corn currency ---------- */
+.hw-inline, .hw-only-flex, .lb-hw-tabs { display: none !important; }
+[data-theme="halloween"] .hw-inline { display: inline-flex !important; }
+[data-theme="halloween"] .hw-only-flex, [data-theme="halloween"] .lb-hw-tabs { display: flex !important; }
+.corn-ico {
+  display: inline-block; width: 13px; height: 16px; flex-shrink: 0; vertical-align: -2px;
+  clip-path: polygon(50% 0, 100% 88%, 82% 100%, 18% 100%, 0 88%);
+  background: linear-gradient(180deg, #fff4d6 0 34%, #ff9a1f 34% 64%, #ffd23f 64% 100%);
+  filter: drop-shadow(0 0 3px rgba(255, 160, 40, 0.6));
+}
+.player-coins.corn { color: #ffcf8a; }
+.corn-val { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.corn-val .corn-ico { width: 15px; height: 19px; }
+
+/* ---------- Leaderboards + Secret Picture under the games ---------- */
+.hw-extra { gap: 12px; width: 100%; margin-top: 10px; align-items: stretch; }
+.hw-small {
+  appearance: none; cursor: pointer; font: inherit; color: #ffe9cc; font-weight: 600; font-size: 15px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 10px 14px; border-radius: 22px;
+  background: linear-gradient(180deg, rgba(44, 20, 62, 0.92), rgba(18, 8, 28, 0.94));
+  border: 2px solid rgba(255, 179, 71, 0.55);
+  box-shadow: 0 0 14px rgba(255, 140, 30, 0.25), 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+.hw-small > span:first-child { font-size: 20px; }
+#btn-hw-lb { flex: 0 0 34%; }
+.hw-secret { flex: 1; gap: 6px; border-color: rgba(199, 155, 255, 0.6); box-shadow: 0 0 14px rgba(176, 108, 255, 0.3), 0 8px 18px rgba(0, 0, 0, 0.45); }
+.hw-secret-top { display: flex; align-items: center; gap: 6px; font-size: 15px !important; }
+.hw-lock { font-size: 17px; }
+.hw-secret-bar { display: block; width: 100%; height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.hw-secret-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #ffd23f, #ff8a1f, #c06cff); box-shadow: 0 0 10px rgba(255, 140, 30, 0.7); transition: width 0.4s ease; }
+.hw-secret-count { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: #ffcf8a; font-variant-numeric: tabular-nums; }
+.hw-secret.unlocked { border-color: #ffd23f; animation: secret-glow 1.6s ease-in-out infinite; }
+@keyframes secret-glow {
+  50% { box-shadow: 0 0 28px rgba(255, 210, 63, 0.75), 0 8px 18px rgba(0, 0, 0, 0.45); }
+}
+.hw-secret.nope { animation: nope 0.4s ease; }
+@keyframes nope { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+/* ---------- minigame HUD ---------- */
+#hw-hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; padding: calc(8px + var(--safe-top)) 10px 0; }
+.hw-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.hw-chips { display: flex; gap: 6px; flex: 1; }
+.hw-info {
+  font-weight: 700; font-size: 18px; color: #ffd7a8; white-space: nowrap; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px rgba(255, 120, 20, 0.6), 0 2px 3px rgba(0, 0, 0, 0.8);
+}
+#hw-hud .sv-chip { background: rgba(24, 10, 36, 0.7); border-color: rgba(255, 138, 31, 0.45); color: #ffe9cc; }
+#hw-hud .icon-btn { background: rgba(24, 10, 36, 0.7); border-color: rgba(255, 138, 31, 0.45); color: #ffd7a8; width: 34px; height: 34px; border-radius: 12px; }
+#hw-btn-sound .cross { display: none; }
+#hw-btn-sound.muted .cross { display: inline; }
+#hw-btn-sound.muted .wave { display: none; }
+#hw-hint-wrap { bottom: calc(28px + var(--safe-bottom)); background: rgba(24, 10, 36, 0.8); border-color: rgba(255, 138, 31, 0.4); }
+.hw-o-secret { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 16px; }
+.hw-o-secret-text { font-size: 13px; color: var(--muted); }
+
+/* ---------- the secret picture ---------- */
+#secret { z-index: 42; background: radial-gradient(100% 70% at 50% 40%, rgba(255, 150, 40, 0.25), rgba(8, 3, 16, 0.92)); }
+.secret-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; max-height: 100%; animation: secret-in 0.7s cubic-bezier(.2, .9, .3, 1.2); }
+.secret-frame {
+  border-radius: 22px; padding: 8px; max-width: min(92vw, 520px);
+  background: linear-gradient(135deg, #ffd23f, #ff8a1f 40%, #b06cff);
+  box-shadow: 0 0 40px rgba(255, 150, 40, 0.6), 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+.secret-frame img { display: block; max-width: 100%; max-height: 66vh; border-radius: 16px; object-fit: contain; background: #fff; }
+@keyframes secret-in { from { opacity: 0; transform: scale(0.6) rotate(-4deg); filter: blur(10px); } to { opacity: 1; transform: none; filter: none; } }
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .hw-extra { margin-top: 4px; }
+  .hw-small { padding: 7px 12px; }
+  .secret-frame img { max-height: 58vh; }
+}

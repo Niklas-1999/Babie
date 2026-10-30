@@ -9,6 +9,7 @@
     const lastAt = {};
     let pickupStreak = 0;
     let pickupAt = 0;
+    let wakaFlip = false;
 
     function ready() {
       if (audio.muted || !audio.ctx) return false;
@@ -74,6 +75,38 @@
     const r = (a, b) => a + Math.random() * (b - a);
 
     return {
+      // --- Halloween minigames ---
+      whoosh() {
+        if (!ready() || !throttle('whoosh', 0.06)) return;
+        hiss(0.16, { freq: 500, to: 2200, q: 0.9, vol: 0.18 });
+      },
+      waka() {
+        if (!ready() || !throttle('waka', 0.11)) return;
+        wakaFlip = !wakaFlip;
+        tone(wakaFlip ? 330 : 440, 0.08, { type: 'triangle', to: wakaFlip ? 440 : 330, vol: 0.1 });
+      },
+      boo() {
+        if (!ready() || !throttle('boo', 0.2)) return;
+        tone(300, 0.5, { type: 'sine', to: 120, vol: 0.2 });
+        tone(310, 0.5, { type: 'sine', to: 125, vol: 0.12, delay: 0.03 });
+        hiss(0.4, { freq: 700, to: 300, q: 2, vol: 0.08 });
+      },
+      popup() {
+        if (!ready() || !throttle('popup', 0.05)) return;
+        tone(r(260, 320), 0.1, { type: 'sine', to: r(560, 680), vol: 0.12 });
+      },
+      ghostEat() {
+        if (!ready()) return;
+        [392, 523, 784, 1047].forEach((f, i) => tone(f, 0.1, { type: 'square', vol: 0.06, delay: i * 0.045 }));
+      },
+      tick() {
+        if (!ready()) return;
+        tone(880, 0.07, { type: 'square', vol: 0.06 });
+      },
+      go() {
+        if (!ready()) return;
+        tone(1320, 0.25, { type: 'square', vol: 0.07 });
+      },
       // soft bubbly pop for menu buttons
       plop() {
         if (!ready() || !throttle('plop', 0.05)) return;
