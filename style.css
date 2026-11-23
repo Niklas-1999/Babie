@@ -584,7 +584,7 @@ h2 { font-size: 32px; margin-bottom: 8px; }
 /* ===================================================================== */
 #menu-bg {
   position: fixed; inset: 0; z-index: 2;
-  background: #6ec3ff url("assets/main_bg.jpg") center 30% / cover no-repeat;
+  background: #6ec3ff url("assets/menu/bg.jpg") center 30% / cover no-repeat;
 }
 #logo {
   position: fixed; z-index: 9; left: 50%; top: 30%;
@@ -846,7 +846,7 @@ h2 { font-size: 32px; margin-bottom: 8px; }
 [data-theme="halloween"] .normal-only { display: none !important; }
 
 /* ---------- backdrop, logo, flash ---------- */
-[data-theme="halloween"] #menu-bg { background: #120a24 url("assets/main_bg_halloween.jpg") center 30% / cover no-repeat; }
+[data-theme="halloween"] #menu-bg { background: #120a24 url("assets/menu/bg_halloween.jpg") center 30% / cover no-repeat; }
 [data-theme="halloween"] #logo { filter: drop-shadow(0 0 18px rgba(255, 140, 30, 0.45)) drop-shadow(0 10px 16px rgba(10, 0, 20, 0.6)); }
 [data-theme="halloween"] #flash { background: #f2eaff; }
 [data-theme="halloween"] #flash.go { animation: lightning 0.8s ease-out; }

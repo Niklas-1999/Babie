@@ -31,7 +31,7 @@
   const CELL = 64;             // spatial grid cell size
   const MAX_TEXTS = 70;
   const MAX_PARTS = 520;
-  const MUSIC = ['Jaunty Guitar Motif.mp3', 'Jaunty Guitar Motif2.mp3'];
+  const MUSIC = ['music/jaunty_guitar_motif_1.mp3', 'music/jaunty_guitar_motif_2.mp3'];
   const DAY_CYCLE = 720;       // seconds for a full day -> sunset -> night -> dawn cycle
 
   function xpNeed(level) {

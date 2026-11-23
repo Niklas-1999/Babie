@@ -31,8 +31,8 @@
   const SPRITE_H = 50;        // on-screen height of the standing pose
 
   const CATS = {
-    mallow:  { name: 'Mallow',  dir: 'assets/Mallow/',  prefix: 'mallow_' },
-    mischko: { name: 'Mischko', dir: 'assets/Mischko/', prefix: 'mischko_' },
+    mallow:  { name: 'Mallow',  dir: 'assets/cats/mallow/',  prefix: 'mallow_' },
+    mischko: { name: 'Mischko', dir: 'assets/cats/mischko/', prefix: 'mischko_' },
   };
   const POSE_FILES = ['idle', 'jump', 'falling', 'landing', 'sitting', 'hit',
     'walking_1', 'walking_2', 'walking_3', 'walking_4'];
@@ -367,18 +367,18 @@
 
   // Texts come from js/i18n.js: level.<id>.name / .win / .lose / .intro
   const LEVELS = {
-    1: { build: buildDoorLevel, music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'] },
-    2: { build: buildKitchenLevel, music: ['Bouncy Banjo Run.mp3', 'Bouncy Banjo Run2.mp3'] },
-    3: { build: buildStreetLevel, music: ['Jaunty Guitar Motif.mp3', 'Jaunty Guitar Motif2.mp3'], intro: true },
-    // TODO: own music and hit sound once they're in assets/sounds
-    4: { build: buildVetLevel, music: ['Bouncing Two-Step.mp3', 'Bouncing Two-Step2.mp3'], intro: true, survival: true },
+    1: { build: buildDoorLevel, music: ['music/bouncing_two_step_1.mp3', 'music/bouncing_two_step_2.mp3'] },
+    2: { build: buildKitchenLevel, music: ['music/bouncy_banjo_run_1.mp3', 'music/bouncy_banjo_run_2.mp3'] },
+    3: { build: buildStreetLevel, music: ['music/jaunty_guitar_motif_1.mp3', 'music/jaunty_guitar_motif_2.mp3'], intro: true },
+    // TODO: own music and hit sound once they're in assets/music and assets/sfx
+    4: { build: buildVetLevel, music: ['music/bouncing_two_step_1.mp3', 'music/bouncing_two_step_2.mp3'], intro: true, survival: true },
   };
   const STORY_LEVELS = [1, 2, 3, 4];
   // Menu music per event theme
-  const THEME_MUSIC = { normal: LEVELS[1].music, halloween: ['Halloween1.mp3'] };
+  const THEME_MUSIC = { normal: LEVELS[1].music, halloween: ['music/halloween_1.mp3'] };
   const THEME_ART = {
-    normal: { bg: 'assets/main_bg.jpg', logo: 'assets/MiMaRo_logo.png' },
-    halloween: { bg: 'assets/main_bg_halloween.jpg', logo: 'assets/MiMaRo_logo_halloween_sm.png' },
+    normal: { bg: 'assets/menu/bg.jpg', logo: 'assets/menu/logo.png' },
+    halloween: { bg: 'assets/menu/bg_halloween.jpg', logo: 'assets/menu/logo_halloween.png' },
   };
   // Screens that belong to the normal game; the Halloween event doesn't show them
   const NORMAL_SCREENS = ['levels', 'cats', 'story', 'leaderboard'];   // switching event from these goes back to the hub
@@ -514,12 +514,13 @@
   // ---------------------------------------------------------------------------
   // Audio
   // ---------------------------------------------------------------------------
-  const SOUND_DIR = 'assets/sounds/';
+  // Sound paths are relative to assets/: 'music/…' for songs, 'sfx/…' for effects
+  const SOUND_DIR = 'assets/';
   const SFX = {
-    jump: ['spring.mp3', 'spring2.mp3', 'spring3.mp3'],
-    land: ['bloop1.mp3', 'bloop2.mp3', 'bloop3.mp3'],
-    crash: ['car crash.mp3'],
-    drive: ['car_driving.mp3', 'car_driving2.mp3'],
+    jump: ['sfx/spring_1.mp3', 'sfx/spring_2.mp3', 'sfx/spring_3.mp3'],
+    land: ['sfx/bloop_1.mp3', 'sfx/bloop_2.mp3', 'sfx/bloop_3.mp3'],
+    crash: ['sfx/car_crash.mp3'],
+    drive: ['sfx/car_driving_1.mp3', 'sfx/car_driving_2.mp3'],
   };
   const MUSIC_VOLUME = 0.35;
   const SFX_VOLUME = 0.8;
@@ -535,7 +536,7 @@
     unlocked: false,
   };
 
-  function soundUrl(file) { return SOUND_DIR + encodeURIComponent(file); }
+  function soundUrl(file) { return SOUND_DIR + file.split('/').map(encodeURIComponent).join('/'); }
 
   function initAudio() {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -701,7 +702,7 @@
   const HW_WALK = { mallow: 2, mischko: 3 };
   const HW_POSES = ['sitting', 'jump', 'falling', 'landing', 'hit'];
   const hwSprites = {};
-  const hwPath = (key, pose) => CATS[key].dir + 'halloween/sm/' + CATS[key].prefix + pose + '_halloween.png';
+  const hwPath = (key, pose) => CATS[key].dir + 'halloween/' + CATS[key].prefix + pose + '_halloween.png';
   let directAim = !!store.get('directAim', false);
   let gfMode = !!store.get('gfMode', false); // infinite lives
 
@@ -3093,7 +3094,7 @@
     $('secret-lock').textContent = open ? '\uD83D\uDDBC\uFE0F' : '\uD83D\uDD12';
   }
 
-  const SECRET_SONG = ['secret_ending.mp3'];   // plays while the secret picture is open
+  const SECRET_SONG = ['music/secret_ending.mp3'];   // plays while the secret picture is open
   $('btn-secret').addEventListener('click', () => {
     const b = $('btn-secret');
     const total = Profile.get('hwCorn', 0) || 0;
@@ -3104,7 +3105,7 @@
       floatText(b, tr('hw.secretLocked', { n: cost - total }));
       return;
     }
-    $('secret-img').src = 'assets/secret_halloween_ending_web.jpg';
+    $('secret-img').src = 'assets/secret/halloween_ending.jpg';
     stopLetter();
     $('secret-tap').classList.toggle('hidden', !letterFor());
     $('secret').classList.remove('hidden');

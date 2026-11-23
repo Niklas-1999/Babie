@@ -13,6 +13,12 @@ A small mobile-first cat game collection, in English and German.
 
 Gold **coins** sit on platforms in every level (they pop up over time on the vet table). They're kept on your account for the casino and skins later. Backyard Survivors has its own fish coins for the Cat Tree.
 
+## Halloween event
+
+A switchable event theme (⚙ settings → Event), on by default: spooky menu with its own logo, background and music, three minigames (🧹 Broom Ride, 👻 Haunted House, 🎃 Pumpkin Patch) in costume, candy corn as Halloween currency, Halloween leaderboards and a secret picture unlocked at 200 candy corn. Code in `js/halloween/`.
+
+Developer notes for continuing the project are in `HANDOFF.md`; the asset layout is explained in `assets/README.md`.
+
 ## Accounts and saving (Firebase Firestore)
 
 Each player is one document in the `players` collection, keyed by the lowercased name: name, coins, fish coins, Cat Tree upgrades, best times for every level, Backyard Survivors record, story progress per cat, the mid-level "Continue" save and the settings. Everything is cached on the device too and synced about 1.5 s after a change, so it keeps working offline and catches up later. The setup is in `js/profile.js` (Firebase config at the top). Leaderboards query that collection directly.

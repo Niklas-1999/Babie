@@ -8,7 +8,7 @@
   HW.IDS = ['broom', 'haunted', 'pumpkin'];
   HW.FIELD = { broom: 'hwBroom', haunted: 'hwHaunted', pumpkin: 'hwPumpkin' };
   // Halloween1 is the menu music; each game has its own track
-  HW.MUSIC = { broom: ['Halloween2.mp3'], haunted: ['Halloween3.mp3'], pumpkin: ['Halloween4.mp3'] };
+  HW.MUSIC = { broom: ['music/halloween_2.mp3'], haunted: ['music/halloween_3.mp3'], pumpkin: ['music/halloween_4.mp3'] };
 
   const TAU = Math.PI * 2;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
