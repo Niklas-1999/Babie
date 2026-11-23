@@ -12,13 +12,18 @@
   <link rel="icon" type="image/png" href="assets/cats/mallow/mallow_sitting.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Dancing+Script:wght@600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Dancing+Script:wght@600;700&family=Fredoka:wght@400;500;600;700&family=Mountains+of+Christmas:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script>
     // Theme before first paint, so even the loading screen is in the right mode (Halloween by default)
     (function () {
-      var t = 'halloween';
-      try { var v = JSON.parse(localStorage.getItem('otd.theme')); if (v === 'normal' || v === 'halloween') t = v; } catch (e) {}
+      // Christmas is the default; a saved choice only counts if it was made during this event (themeTag)
+      var t = 'christmas';
+      try {
+        var v = JSON.parse(localStorage.getItem('otd.theme'));
+        var tag = JSON.parse(localStorage.getItem('otd.themeTag'));
+        if (tag === 'xmas2026' && (v === 'normal' || v === 'halloween' || v === 'christmas')) t = v;
+      } catch (e) {}
       document.documentElement.setAttribute('data-theme', t);
     })();
   </script>
@@ -36,6 +41,8 @@
     <svg class="bat b3" viewBox="0 0 64 32"><path d="M32 12c2-4 4-6 4-6s1 4 0 6c6-6 16-8 28-4-6 2-10 6-10 12-4-4-9-4-12 0-2-3-6-4-8-2-2-2-6-1-8 2-3-4-8-4-12 0 0-6-4-10-10-12 12-4 22-2 28 4-1-2 0-6 0-6s2 2 4 6z"/></svg>
     <i class="leaf l1"></i><i class="leaf l2"></i><i class="leaf l3"></i><i class="leaf l4"></i><i class="leaf l5"></i><i class="leaf l6"></i><i class="leaf l7"></i>
   </div>
+  <!-- Christmas ambience: falling snow -->
+  <div id="snowy" aria-hidden="true"><i class="sf sf1"></i><i class="sf sf2"></i><i class="sf sf3"></i><i class="sf sf4"></i><i class="sf sf5"></i><i class="sf sf6"></i><i class="sf sf7"></i><i class="sf sf8"></i><i class="sf sf9"></i><i class="sf sf10"></i><i class="sf sf11"></i><i class="sf sf12"></i><i class="sf sf13"></i><i class="sf sf14"></i><i class="sf sf15"></i><i class="sf sf16"></i><i class="sf sf17"></i><i class="sf sf18"></i></div>
   <img id="logo" class="hidden" src="assets/menu/logo.png" alt="MiMaRo – Mischko &amp; Mallow's Adventure">
   <div id="flash"></div>
 
@@ -95,6 +102,12 @@
       <span class="player-coins normal-only"><i class="coin-ico"></i><span id="player-coins">0</span></span>
       <span class="player-coins fish normal-only"><span class="fish-ico">&#128176;</span><span id="player-fish">0</span></span>
       <span class="player-coins corn hw-inline"><i class="corn-ico"></i><span id="player-corn">0</span></span>
+      <span class="player-coins xm xm-inline">&#127873; <span id="player-xm">0 / 24</span></span>
+    </div>
+    <!-- Christmas: the Advent calendar -->
+    <div class="xm-calendar xm-only" id="xm-calendar">
+      <div class="xm-garland" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="xm-doors" id="xm-doors"></div>
     </div>
     <div class="hub-menu">
       <button class="btn small ghost hub-continue normal-only hidden" id="btn-continue"></button>
@@ -477,6 +490,49 @@
     <div class="secret-letter hidden" id="secret-letter"><div class="letter-roll" id="letter-roll"></div></div>
   </section>
 
+  <!-- Christmas: door card (game description + cat choice) -->
+  <section id="xm-modal" class="screen hidden">
+    <div class="panel xm-panel">
+      <p class="eyebrow" id="xm-m-day"></p>
+      <div class="xm-m-icon" id="xm-m-icon"></div>
+      <h2 id="xm-m-name"></h2>
+      <p class="sub" id="xm-m-desc"></p>
+      <div class="xm-m-word hidden" id="xm-m-word"></div>
+      <p class="xm-m-pick" id="xm-m-pick"></p>
+      <div class="cats xm-cats">
+        <button class="cat-card xm-cat" data-xmcat="mallow"><div class="cat-img"><img src="" alt="Mallow"></div><div class="cat-name">Mallow</div></button>
+        <button class="cat-card xm-cat" data-xmcat="mischko"><div class="cat-img"><img src="" alt="Mischko"></div><div class="cat-name">Mischko</div></button>
+      </div>
+      <div class="actions"><button class="btn ghost" id="xm-m-close" data-i18n="back">Back</button></div>
+    </div>
+  </section>
+
+  <!-- Christmas minigames: HUD -->
+  <div id="xm-hud" class="hidden">
+    <div class="hw-top">
+      <div class="hw-chips"><div class="sv-chip xm-chip"><span id="xm-day"></span></div></div>
+      <div class="hw-info xm-info" id="xm-info"></div>
+      <div class="sv-buttons">
+        <button class="icon-btn" id="xm-btn-sound" aria-label="Mute"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <button class="icon-btn gear-btn" data-i18n-aria="settings.title" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.4 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.9h4l.4-2.9a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
+        <button class="icon-btn" id="xm-btn-pause" aria-label="Pause"><svg viewBox="0 0 24 24" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg></button>
+      </div>
+    </div>
+    <div id="xm-hint" class="hint"><div class="hint-hand"></div><span id="xm-hint-text"></span></div>
+  </div>
+
+  <!-- Christmas minigames: pause -->
+  <section id="xm-pause" class="screen hidden">
+    <div class="panel small">
+      <h2 data-i18n="pause.title">Paused</h2>
+      <div class="actions col">
+        <button class="btn primary" id="xm-resume" data-i18n="pause.resume">Resume</button>
+        <button class="btn ghost" id="xm-restart" data-i18n="pause.restart">Restart</button>
+        <button class="btn ghost" id="xm-quit" data-i18n="xm.calendar">Advent Calendar</button>
+      </div>
+    </div>
+  </section>
+
   <!-- Settings (on top of everything) -->
   <section id="settings" class="screen hidden">
     <div class="panel small settings-panel">
@@ -492,6 +548,7 @@
       <div class="setting">
         <span class="setting-label" data-i18n="settings.theme">Event</span>
         <div class="seg" id="set-theme">
+          <button data-theme-btn="christmas">&#127876; <span data-i18n="settings.christmas">Christmas</span></button>
           <button data-theme-btn="halloween">&#127875; <span data-i18n="settings.halloween">Halloween</span></button>
           <button data-theme-btn="normal">&#9728;&#65039; <span data-i18n="settings.normal">Normal</span></button>
         </div>
@@ -555,6 +612,11 @@
   <script src="js/halloween/broom.js"></script>
   <script src="js/halloween/haunted.js"></script>
   <script src="js/halloween/pumpkin.js"></script>
+  <script src="js/christmas/xm.js"></script>
+  <script src="js/christmas/games1.js"></script>
+  <script src="js/christmas/games2.js"></script>
+  <script src="js/christmas/games3.js"></script>
+  <script src="js/christmas/games4.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

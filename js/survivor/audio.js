@@ -107,6 +107,13 @@
         if (!ready()) return;
         tone(1320, 0.25, { type: 'square', vol: 0.07 });
       },
+      // a soft bell tone at a given pitch (melodies in the Christmas games)
+      note(f) {
+        if (!ready()) return;
+        tone(f, 0.7, { type: 'sine', vol: 0.22 });
+        tone(f * 2, 0.45, { type: 'sine', vol: 0.07 });
+        tone(f * 3.01, 0.25, { type: 'triangle', vol: 0.03 });
+      },
       // soft bubbly pop for menu buttons
       plop() {
         if (!ready() || !throttle('plop', 0.05)) return;

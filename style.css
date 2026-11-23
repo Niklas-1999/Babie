@@ -1088,3 +1088,238 @@ h2 { font-size: 32px; margin-bottom: 8px; }
   .hw-small { padding: 7px 12px; }
   .secret-frame img { max-height: 58vh; }
 }
+
+/* ===================================================================== */
+/* Christmas event: the Advent calendar (html[data-theme="christmas"])   */
+/* ===================================================================== */
+.xm-only, .xm-inline, #snowy { display: none !important; }
+[data-theme="christmas"] .xm-inline { display: inline-flex !important; }
+[data-theme="christmas"] .normal-only,
+[data-theme="christmas"] .hub-menu { display: none !important; }
+
+[data-theme="christmas"] {
+  --bg: #0b1730;
+  --panel: rgba(13, 27, 58, 0.9);
+  --panel-border: rgba(255, 214, 102, 0.35);
+  --text: #fffaf0;
+  --muted: #c8d4ec;
+  --accent: #ffcf4a;
+  --accent-2: #e63946;
+  --good: #5dd39e;
+}
+
+/* backdrop, logo, flash, loading */
+[data-theme="christmas"] #menu-bg { background: #0f2347 url("assets/menu/bg_christmas.jpg") center 35% / cover no-repeat; }
+[data-theme="christmas"] #logo { filter: drop-shadow(0 0 16px rgba(255, 220, 140, 0.5)) drop-shadow(0 10px 16px rgba(0, 10, 40, 0.6)); }
+[data-theme="christmas"] #logo.hub { top: 9.5%; width: min(54vw, 290px); max-height: 15vh; }
+[data-theme="christmas"] #flash { background: #ffffff; }
+[data-theme="christmas"] #loading { background: radial-gradient(120% 90% at 50% 35%, #1d3d75, #0a1530 70%); }
+[data-theme="christmas"] .load-bar { height: 6px; background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
+[data-theme="christmas"] .load-fill {
+  background: repeating-linear-gradient(-45deg, #e63946 0 8px, #ffffff 8px 16px);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6); border-radius: 3px;
+}
+
+/* falling snow over the menus */
+[data-theme="christmas"] #menu-bg:not(.hidden) ~ #snowy {
+  display: block !important; position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden;
+}
+#snowy .sf {
+  position: absolute; top: -4%; width: 7px; height: 7px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 40%, rgba(255, 255, 255, 0) 70%);
+  animation: snow-fall 12s linear infinite;
+}
+#snowy .sf:nth-child(3n) { width: 4px; height: 4px; animation-duration: 16s; opacity: 0.8; }
+#snowy .sf:nth-child(4n) { width: 10px; height: 10px; animation-duration: 10s; }
+#snowy .sf1 { left: 3%; animation-delay: -1s; }   #snowy .sf2 { left: 9%; animation-delay: -7s; }
+#snowy .sf3 { left: 15%; animation-delay: -3s; }  #snowy .sf4 { left: 21%; animation-delay: -10s; }
+#snowy .sf5 { left: 27%; animation-delay: -5s; }  #snowy .sf6 { left: 33%; animation-delay: -12s; }
+#snowy .sf7 { left: 39%; animation-delay: -2s; }  #snowy .sf8 { left: 45%; animation-delay: -8s; }
+#snowy .sf9 { left: 51%; animation-delay: -4s; }  #snowy .sf10 { left: 57%; animation-delay: -11s; }
+#snowy .sf11 { left: 63%; animation-delay: -6s; } #snowy .sf12 { left: 69%; animation-delay: -13s; }
+#snowy .sf13 { left: 75%; animation-delay: -1.5s; } #snowy .sf14 { left: 81%; animation-delay: -9s; }
+#snowy .sf15 { left: 87%; animation-delay: -4.5s; } #snowy .sf16 { left: 93%; animation-delay: -12.5s; }
+#snowy .sf17 { left: 48%; animation-delay: -14s; } #snowy .sf18 { left: 72%; animation-delay: -15s; }
+@keyframes snow-fall {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(18px, 27vh); }
+  50% { transform: translate(-14px, 54vh); }
+  75% { transform: translate(16px, 81vh); }
+  100% { transform: translate(-6px, 110vh); }
+}
+
+/* type, panels, buttons */
+[data-theme="christmas"] h2 {
+  font-family: "Mountains of Christmas", "Fredoka", system-ui, sans-serif; font-weight: 700; letter-spacing: 0.01em;
+  color: #fff7e6; text-shadow: 0 0 14px rgba(255, 210, 110, 0.55), 0 3px 0 #8b1a24;
+}
+[data-theme="christmas"] .eyebrow { color: #ffcf4a; }
+[data-theme="christmas"] .panel {
+  border: 2px solid rgba(255, 207, 74, 0.45);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 30px rgba(255, 207, 74, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+[data-theme="christmas"] .screen:not(.clear) { background: radial-gradient(120% 80% at 50% 0%, rgba(255, 210, 110, 0.14), transparent 60%), rgba(6, 14, 34, 0.6); }
+[data-theme="christmas"] .btn.primary {
+  color: #fff; background: linear-gradient(135deg, #ff5d6c, #e63946 50%, #b5162a);
+  box-shadow: 0 10px 24px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+[data-theme="christmas"] .btn.ghost { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 207, 74, 0.4); }
+[data-theme="christmas"] #login-name {
+  background: rgba(255, 252, 244, 0.97); color: #6b1a22; border-color: #ffcf4a;
+  box-shadow: 0 0 0 4px rgba(255, 207, 74, 0.25), 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+[data-theme="christmas"] .link-btn { background: rgba(13, 27, 58, 0.75); border-color: rgba(255, 207, 74, 0.55); }
+[data-theme="christmas"] .player-chip,
+[data-theme="christmas"] .gear-btn.floating {
+  background: rgba(13, 27, 58, 0.75); border-color: rgba(255, 207, 74, 0.6);
+  box-shadow: 0 0 14px rgba(255, 207, 74, 0.25), 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+[data-theme="christmas"] .gear-btn.floating { color: #ffcf4a; }
+.player-coins.xm { color: #ffe9b0; }
+[data-theme="christmas"] .floaty { color: #fff6d6; text-shadow: 0 0 12px rgba(230, 57, 70, 0.9), 0 2px 4px rgba(0, 0, 0, 0.8); }
+
+/* ---------- the calendar ---------- */
+[data-theme="christmas"] .xm-calendar {
+  display: flex !important; flex-direction: column;
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: calc(19.5vh + var(--safe-top)); bottom: calc(10px + var(--safe-bottom));
+  width: min(calc(100vw - 20px), 520px);
+  padding: 22px 10px 10px; border-radius: 22px;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(255, 255, 255, 0.08) 0 2px, transparent 3px) 0 0 / 34px 34px,
+    linear-gradient(180deg, rgba(120, 18, 32, 0.92), rgba(78, 10, 22, 0.95));
+  border: 3px solid #d9a520;
+  box-shadow: 0 0 0 4px rgba(120, 18, 32, 0.6), 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 0 30px rgba(0, 0, 0, 0.35);
+  animation: pop-in 0.5s cubic-bezier(.2, .9, .3, 1.2);
+}
+.xm-garland {
+  position: absolute; left: 6px; right: 6px; top: -9px; height: 22px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  border-top: 3px solid #2f6b3a; border-radius: 50% 50% 0 0 / 30% 30% 0 0;
+}
+.xm-garland i {
+  width: 9px; height: 14px; margin-top: 2px; border-radius: 50% 50% 45% 45%;
+  background: #ff5d5d; box-shadow: 0 0 10px #ff5d5d;
+  animation: bulb 1.6s ease-in-out infinite;
+}
+.xm-garland i:nth-child(4n+2) { background: #ffd23f; box-shadow: 0 0 10px #ffd23f; animation-delay: 0.4s; }
+.xm-garland i:nth-child(4n+3) { background: #5dd39e; box-shadow: 0 0 10px #5dd39e; animation-delay: 0.8s; }
+.xm-garland i:nth-child(4n) { background: #5db4ff; box-shadow: 0 0 10px #5db4ff; animation-delay: 1.2s; }
+@keyframes bulb { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; box-shadow: none; } }
+.xm-doors {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); gap: 8px;
+}
+
+.xm-door {
+  appearance: none; border: 0; padding: 0; margin: 0; cursor: pointer; font: inherit;
+  position: relative; perspective: 700px; background: transparent; border-radius: 12px;
+  -webkit-tap-highlight-color: transparent;
+}
+.xm-door-back {
+  position: absolute; inset: 0; border-radius: 12px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; padding: 4px;
+  background: radial-gradient(circle at 50% 45%, #fff3c4, #f3c463 45%, #a8661c 100%);
+  box-shadow: inset 0 0 14px rgba(80, 30, 0, 0.6);
+}
+.xm-word {
+  font-family: "Mountains of Christmas", "Fredoka", sans-serif; font-weight: 700; color: #7a1020;
+  font-size: 20px; white-space: nowrap;
+  line-height: 1; text-align: center; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+  opacity: 0; transition: opacity 0.4s ease 0.35s;
+}
+.xm-door.open .xm-word { opacity: 1; }
+.xm-door-front {
+  position: absolute; inset: 0; border-radius: 12px; overflow: hidden;
+  transform-origin: left center; transition: transform 0.95s cubic-bezier(.35, 1.35, .5, 1);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(255, 220, 140, 0.85);
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.12), 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+.xm-door.open .xm-door-front { transform: rotateY(-108deg); box-shadow: none; }
+.xm-num {
+  font-family: "Mountains of Christmas", "Fredoka", sans-serif; font-weight: 700;
+  font-size: min(8.5vw, 38px); line-height: 1; color: #fff8e8;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 10px rgba(255, 220, 140, 0.4);
+}
+.xm-snowcap {
+  position: absolute; left: -2px; right: -2px; top: -2px; height: 11px;
+  background: radial-gradient(circle at 10% 100%, #fff 6px, transparent 7px) 0 0 / 22px 12px repeat-x, #fff;
+  border-radius: 10px 10px 50% 50% / 10px 10px 6px 6px; opacity: 0.95;
+}
+.xm-deco { position: absolute; right: 4px; bottom: 2px; font-size: min(3.6vw, 15px); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
+.xm-knob { position: absolute; right: 6px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #ffd66b; box-shadow: 0 0 0 1px rgba(80, 40, 0, 0.5); }
+.style-red .xm-door-front { background: linear-gradient(145deg, #e0434f, #a3172a); }
+.style-green .xm-door-front { background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 1.5px, transparent 2px) 0 0 / 12px 12px, linear-gradient(145deg, #2f9e57, #17653a); }
+.style-cream .xm-door-front { background: linear-gradient(145deg, #fff6e4, #ecd8b4); }
+.style-cream .xm-num { color: #b5162a; text-shadow: 0 2px 0 rgba(255, 255, 255, 0.7); }
+.style-blue .xm-door-front { background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 1px, transparent 2px) 0 0 / 9px 9px, linear-gradient(145deg, #3a6fb8, #1b3f78); }
+.style-gold .xm-door-front { background: linear-gradient(145deg, #f2c94c, #b8860b); }
+.style-gold .xm-num { color: #6b1a10; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); }
+.style-plaid .xm-door-front {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 4px, transparent 4px 14px),
+    repeating-linear-gradient(90deg, rgba(20, 80, 40, 0.55) 0 5px, transparent 5px 14px),
+    linear-gradient(145deg, #c4303c, #8c1625);
+}
+.style-gold24 .xm-door-front {
+  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.5), transparent 60%), linear-gradient(145deg, #ffd96b, #c48a12);
+  border-color: #fff4c2;
+}
+.style-gold24 .xm-num { color: #8b1a24; font-size: min(10vw, 44px); text-shadow: 0 2px 0 rgba(255, 255, 255, 0.6); }
+.xm-door.locked .xm-door-front { filter: saturate(0.75) brightness(0.88); }
+.xm-door.ready .xm-door-front { animation: door-shimmer 3s ease-in-out infinite; }
+.xm-door.today .xm-door-front { animation: door-today 1.4s ease-in-out infinite; }
+@keyframes door-shimmer { 50% { box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.12), 0 0 14px rgba(255, 230, 150, 0.55); } }
+@keyframes door-today {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 220, 90, 0.6); transform: rotateY(0) scale(1); }
+  50% { box-shadow: 0 0 26px rgba(255, 230, 120, 1); transform: rotateY(0) scale(1.05); }
+}
+.xm-door.open .xm-door-front { animation: none; }
+.xm-door:active:not(.open) .xm-door-front { transform: rotateY(-14deg); }
+.xm-door.nope { animation: nope 0.4s ease; }
+.xm-door.opening .xm-door-back { animation: door-glow 1.6s ease-out; }
+@keyframes door-glow { 0% { box-shadow: inset 0 0 14px rgba(80, 30, 0, 0.6), 0 0 0 rgba(255, 230, 140, 0); } 30% { box-shadow: inset 0 0 14px rgba(80, 30, 0, 0.6), 0 0 34px 10px rgba(255, 230, 140, 0.9); } }
+
+/* ---------- door card ---------- */
+.xm-panel { max-width: 400px; }
+.xm-m-icon { font-size: 54px; line-height: 1.1; margin: 4px 0 2px; animation: bob 1.4s ease-in-out infinite; }
+.xm-m-word {
+  margin: -6px auto 12px; padding: 8px 16px; display: inline-block; border-radius: 14px;
+  font-family: "Mountains of Christmas", "Fredoka", sans-serif; font-weight: 700; font-size: 30px; color: #7a1020;
+  background: radial-gradient(circle at 50% 40%, #fff3c4, #f3c463);
+  box-shadow: 0 0 20px rgba(255, 210, 110, 0.5);
+}
+.xm-m-pick { margin: 0 0 8px; font-weight: 600; color: var(--muted); }
+.xm-cats { margin-bottom: 14px; }
+.xm-cats .cat-img { height: 96px; }
+
+/* ---------- minigame HUD ---------- */
+#xm-hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; padding: calc(8px + var(--safe-top)) 10px 0; }
+#xm-hud .sv-chip { background: rgba(13, 27, 58, 0.75); border-color: rgba(255, 207, 74, 0.55); color: #fff6dd; font-family: "Mountains of Christmas", "Fredoka", sans-serif; font-weight: 700; font-size: 17px; }
+#xm-hud .icon-btn { background: rgba(13, 27, 58, 0.75); border-color: rgba(255, 207, 74, 0.55); color: #ffe7a8; width: 34px; height: 34px; border-radius: 12px; }
+.xm-info { color: #fff6dd; text-shadow: 0 0 10px rgba(255, 200, 80, 0.6), 0 2px 3px rgba(0, 0, 0, 0.8); }
+#xm-btn-sound .cross { display: none; }
+#xm-btn-sound.muted .cross { display: inline; }
+#xm-btn-sound.muted .wave { display: none; }
+#xm-hint { bottom: calc(26px + var(--safe-bottom)); background: rgba(13, 27, 58, 0.82); border-color: rgba(255, 207, 74, 0.45); }
+
+/* landscape: 8 doors per row */
+@media (orientation: landscape) {
+  [data-theme="christmas"] #logo.hub { top: 10%; max-height: 16vh; width: min(30vw, 250px); }
+  [data-theme="christmas"] .xm-calendar { top: calc(20vh + var(--safe-top)); width: min(calc(100vw - 24px), 900px); padding-top: 18px; }
+  .xm-doors { grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(3, 1fr); gap: 7px; }
+  .xm-num { font-size: min(5.5vh, 34px); }
+}
+@media (max-height: 500px) {
+  .xm-panel { max-width: 640px; }
+  .xm-m-icon { font-size: 32px; margin: 0; }
+  .xm-m-word { font-size: 22px; padding: 4px 12px; margin: -4px auto 6px; }
+  .xm-cats { margin-bottom: 8px; }
+  .xm-cats .cat-img { height: 58px; }
+  .xm-cats .cat-card { padding: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #snowy .sf, .xm-garland i, .xm-door .xm-door-front { animation: none !important; }
+}

@@ -375,18 +375,23 @@
   };
   const STORY_LEVELS = [1, 2, 3, 4];
   // Menu music per event theme
-  const THEME_MUSIC = { normal: LEVELS[1].music, halloween: ['music/halloween_1.mp3'] };
+  const THEME_MUSIC = { normal: LEVELS[1].music, halloween: ['music/halloween_1.mp3'], christmas: window.XM.MUSIC };
   const THEME_ART = {
     normal: { bg: 'assets/menu/bg.jpg', logo: 'assets/menu/logo.png' },
     halloween: { bg: 'assets/menu/bg_halloween.jpg', logo: 'assets/menu/logo_halloween.png' },
+    christmas: { bg: 'assets/menu/bg_christmas.jpg', logo: 'assets/menu/logo_christmas.png' },
   };
   // Screens that belong to the normal game; the Halloween event doesn't show them
   const NORMAL_SCREENS = ['levels', 'cats', 'story', 'leaderboard'];   // switching event from these goes back to the hub
 
   // Device settings
   let orientation = store.get('orient', 'portrait');   // every game is played in this orientation
-  let theme = store.get('theme', 'halloween');          // 'halloween' (default during the event) or 'normal'
-  if (!THEME_MUSIC[theme]) theme = 'halloween';
+  // The current event's theme is the default. A saved choice only counts if it was made during
+  // this event (EVENT_TAG), so everyone is moved to the new event once when it starts.
+  const EVENT_TAG = window.XM.EVENT_TAG;
+  const DEFAULT_THEME = 'christmas';
+  let theme = store.get('themeTag', '') === EVENT_TAG ? store.get('theme', DEFAULT_THEME) : DEFAULT_THEME;
+  if (!THEME_MUSIC[theme]) theme = DEFAULT_THEME;
   const menuMusic = () => THEME_MUSIC[theme];
 
   function applyView() {
@@ -430,7 +435,7 @@
   function checkOrientation() {
     const portrait = window.innerHeight >= window.innerWidth;
     const want = orientation;
-    const playing = (game.running && !game.wonAt && !game.over) || (survivor && survivor.running) || (hw && hw.running);
+    const playing = (game.running && !game.wonAt && !game.over) || (survivor && survivor.running) || (hw && hw.running) || (xm && xm.running);
     wrongOrientation = isTouch && playing && portrait !== (want === 'portrait');
     const el = $('rotate');
     el.classList.toggle('hidden', !wrongOrientation);
@@ -698,11 +703,40 @@
   let accumulator = 0;
   let survivor = null;   // Backyard Survivors, created at boot
   let hw = null;         // Halloween minigames, created at boot
+  let xm = null;         // Christmas Advent calendar, created at boot
   // Halloween costume sprites: Mischko has 3 walking frames, Mallow 2; walking 1 doubles as idle
   const HW_WALK = { mallow: 2, mischko: 3 };
   const HW_POSES = ['sitting', 'jump', 'falling', 'landing', 'hit'];
   const hwSprites = {};
   const hwPath = (key, pose) => CATS[key].dir + 'halloween/' + CATS[key].prefix + pose + '_halloween.png';
+  // Christmas costumes: 2 walking frames each, plus a real idle pose
+  const XM_POSES = ['idle', 'sitting', 'jump', 'falling', 'landing', 'hit'];
+  const xmSprites = {};
+  const xmPath = (key, pose) => CATS[key].dir + 'christmas/' + CATS[key].prefix + pose + '_christmas.png';
+  const costumes = { halloween: null, christmas: null };   // load promises, so each set loads once
+  function loadCostumes(kind) {
+    if (costumes[kind]) return costumes[kind];
+    const jobs = [];
+    for (const k of Object.keys(CATS)) {
+      if (kind === 'halloween') {
+        const set = (hwSprites[k] = hwSprites[k] || { walk: [] });
+        for (let i = 1; i <= HW_WALK[k]; i++) {
+          const idx = i - 1;
+          jobs.push(loadImage(hwPath(k, 'walking_' + i)).then((im) => { set.walk[idx] = im; if (idx === 0) set.idle = im; }));
+        }
+        for (const pose of HW_POSES) jobs.push(loadImage(hwPath(k, pose)).then((im) => { set[pose] = im; }));
+      } else {
+        const set = (xmSprites[k] = xmSprites[k] || { walk: [] });
+        for (let i = 1; i <= 2; i++) {
+          const idx = i - 1;
+          jobs.push(loadImage(xmPath(k, 'walking_' + i)).then((im) => { set.walk[idx] = im; }));
+        }
+        for (const pose of XM_POSES) jobs.push(loadImage(xmPath(k, pose)).then((im) => { set[pose] = im; }));
+      }
+    }
+    costumes[kind] = Promise.all(jobs);
+    return costumes[kind];
+  }
   let directAim = !!store.get('directAim', false);
   let gfMode = !!store.get('gfMode', false); // infinite lives
 
@@ -2845,6 +2879,11 @@
       requestAnimationFrame(frame);
       return;
     }
+    if (xm && xm.active) {
+      xm.frame(dt);
+      requestAnimationFrame(frame);
+      return;
+    }
     if (game.running && !game.paused && !wrongOrientation) {
       accumulator += dt;
       while (accumulator >= STEP) {
@@ -2902,7 +2941,7 @@
   let gearShown = null;
   function updateGear() {
     const show = $('loading').classList.contains('hidden') && (wrongOrientation ||
-      ($('hud').classList.contains('hidden') && $('sv-hud').classList.contains('hidden') && $('hw-hud').classList.contains('hidden')));
+      ($('hud').classList.contains('hidden') && $('sv-hud').classList.contains('hidden') && $('hw-hud').classList.contains('hidden') && $('xm-hud').classList.contains('hidden')));
     if (show !== gearShown) { gearShown = show; $('btn-settings').classList.toggle('hidden', !show); }
   }
 
@@ -3037,7 +3076,7 @@
   // Settings travel with the account, so they follow the player to other devices.
   function saveSettings() {
     if (!Profile.current) return;
-    Profile.set('settings', { lang: I18N.lang, orient: orientation, gf: gfMode, directAim, muted: audio.muted, theme });
+    Profile.set('settings', { lang: I18N.lang, orient: orientation, gf: gfMode, directAim, muted: audio.muted, theme, themeTag: EVENT_TAG });
   }
 
   function loadAccountSettings() {
@@ -3048,12 +3087,14 @@
     if (st.gf != null) { gfMode = !!st.gf; store.set('gfMode', gfMode); }
     if (st.directAim != null) setDirectAim(!!st.directAim);
     if (st.muted != null && st.muted !== audio.muted) setMuted(!!st.muted);
-    if (st.theme) setTheme(st.theme);
+    // a theme saved before this event started doesn't count: the event theme wins once
+    setTheme(st.theme && st.themeTag === EVENT_TAG ? st.theme : DEFAULT_THEME);
   }
 
   function goHub() {
     if (survivor && survivor.active) survivor.quit();
     if (hw && hw.active) hw.quit();
+    if (xm && xm.active) xm.quit();
     refreshHub();
     showScreen('hub');
     setPlaylist(menuMusic());
@@ -3065,6 +3106,7 @@
     $('player-fish').textContent = Profile.get('svCoins', 0);
     $('player-chip').classList.toggle('guest', Profile.guest);
     refreshSecret();
+    if (xm) xm.refresh();
     const save = Profile.get('save', null);
     const cont = $('btn-continue');
     if (save && CATS[save.cat] && LEVELS[save.level]) {
@@ -3405,6 +3447,7 @@
     if (game.running && !game.paused && !game.wonAt && !game.over) pause();
     if (survivor) survivor.pause();
     if (hw) hw.pause();
+    if (xm) xm.pause();
     syncSettings();
     $('settings').classList.remove('hidden');
   }
@@ -3431,13 +3474,16 @@
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', theme);
     $('logo').src = THEME_ART[theme].logo;
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'halloween' ? '#1a0d26' : '#5b3a29');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', { halloween: '#1a0d26', christmas: '#0f2347' }[theme] || '#5b3a29');
+    if (theme === 'halloween' || theme === 'christmas') loadCostumes(theme);
   }
 
   function setTheme(t) {
     if (t === theme || !THEME_MUSIC[t]) return;
     theme = t;
     store.set('theme', t);
+    store.set('themeTag', EVENT_TAG);
+    if (xm) xm.closeModal();
     applyTheme();
     const inGame = game.running || (survivor && survivor.active);
     if (!inGame) setPlaylist(menuMusic());
@@ -3468,7 +3514,7 @@
   document.querySelectorAll('#set-theme button').forEach((b) => b.addEventListener('click', () => {
     plop(); setTheme(b.dataset.themeBtn); syncSettings(); saveSettings();
   }));
-  $('opt-sound').addEventListener('change', (e) => { setMuted(!e.target.checked); if (survivor) survivor.syncSound(); if (hw) hw.syncSound(); saveSettings(); });
+  $('opt-sound').addEventListener('change', (e) => { setMuted(!e.target.checked); if (survivor) survivor.syncSound(); if (hw) hw.syncSound(); if (xm) xm.syncSound(); saveSettings(); });
   $('opt-invert').addEventListener('change', (e) => { setDirectAim(e.target.checked); saveSettings(); });
   $('opt-invert-2').addEventListener('change', (e) => { setDirectAim(e.target.checked); saveSettings(); });
   $('opt-gf').addEventListener('change', (e) => { gfMode = e.target.checked; store.set('gfMode', gfMode); updateHud(true); saveSettings(); });
@@ -3479,6 +3525,7 @@
     if (game.running) stopRun();
     if (survivor && survivor.active) survivor.quit();
     if (hw && hw.active) hw.quit();
+    if (xm && xm.active) xm.quit();
     Profile.logout();
     setPlaylist(menuMusic());
     showTitle();
@@ -3495,6 +3542,7 @@
     checkOrientation();
     if (survivor) survivor.onLanguage();
     if (hw) hw.onLanguage();
+    if (xm) xm.onLanguage();
     if (currentScreen === 'hub') refreshSecret();
   });
 
@@ -3567,6 +3615,19 @@
     console.error('Halloween games failed to start', e);
   }
 
+  try {
+    xm = window.XM && window.XM.create({
+      canvas, ctx, view, audio, store: Profile, sfx: uiSfx, sprites: xmSprites,
+      showScreen, setMuted, plop, floatText,
+      toHub: () => goHub(),
+      blocked: () => wrongOrientation,
+      onRunChange: checkOrientation,
+      catImage: (key, pose) => xmPath(key, pose),
+    });
+  } catch (e) {
+    console.error('Christmas calendar failed to start', e);
+  }
+
   // ---------------------------------------------------------------------------
   // Loading: a cat walks along the bar while everything loads
   // ---------------------------------------------------------------------------
@@ -3595,14 +3656,7 @@
       sprites[k] = sprites[k] || {};
       for (const pose of POSE_FILES) jobs.push(() => loadImage(c.dir + c.prefix + pose + '.png').then((im) => { sprites[k][pose] = im; }));
     }
-    for (const k of Object.keys(CATS)) {
-      const set = (hwSprites[k] = { walk: [] });
-      for (let i = 1; i <= HW_WALK[k]; i++) {
-        const idx = i - 1;
-        jobs.push(() => loadImage(hwPath(k, 'walking_' + i)).then((im) => { set.walk[idx] = im; if (idx === 0) set.idle = im; }));
-      }
-      for (const pose of HW_POSES) jobs.push(() => loadImage(hwPath(k, pose)).then((im) => { set[pose] = im; }));
-    }
+    if (theme === 'halloween' || theme === 'christmas') jobs.push(() => loadCostumes(theme));
     jobs.push(() => loadImage(THEME_ART[theme].bg));
     jobs.push(() => loadImage(THEME_ART[theme].logo));
     if (document.fonts && document.fonts.ready) jobs.push(() => document.fonts.ready);
@@ -3643,5 +3697,5 @@
   requestAnimationFrame(frame);
 
   // debug hook for testing in the console
-  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight, survivor, hw, Profile };
+  window.__game = { game, player, audio, get level() { return level; }, LEVELS, jump, startGame, simulateFlight, survivor, hw, xm, Profile };
 })();

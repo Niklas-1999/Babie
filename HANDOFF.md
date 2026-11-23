@@ -13,7 +13,7 @@ Read this fully before changing anything. Section 13 (gotchas) and section 14 (C
 | Repo | `https://github.com/Niklas-1999/Babie` (public). Local clone: `d:\Bebiprojekt\Babie` |
 | Live site | `https://niklas-1999.github.io/Babie/` – **GitHub Pages publishes the `halloween` branch** (verified 2026-11-23: the live page serves the Halloween build; `main` is far behind). If you move work to a new branch, the live site does NOT change until Pages is switched or that branch is merged into `halloween`. |
 | Branches | `christmas` (newest: Halloween + asset cleanup + this handoff) · `halloween` (live, what Niklas called "the current up to date branch") · `Testing` (accounts/menus, before Halloween) · `main` (old: Backyard Survivors era, Sept/Oct). |
-| Work branch now | **`christmas`** – do the Christmas special here. |
+| Work branch now | **`christmas`** – Advent calendar built (section 14). |
 | Database | Firebase Firestore project `mimaro-db`, collection `players`. Working and tested end to end (see section 7). |
 | Languages | English + German, everything translated (`js/i18n.js`). |
 | Current event | Halloween mode is the default (`theme` = `halloween`). |
@@ -186,7 +186,21 @@ assets/source/ originals NOT loaded by the game (sprite sheets, full-size PNGs, 
 12. **Theme is stored per account** (`settings.theme`): players who used Halloween will be switched back to Halloween on login even if the default becomes Christmas. When making Christmas the default, decide with Niklas whether to force it (e.g. migrate saved `halloween` → `christmas`, or pick the event by date) and update the `<head>` whitelist script.
 13. Test both themes after CSS changes – theme-specific `display` rules use `!important`.
 
-## 14. Christmas special – checklist (next task)
+## 14. Christmas Advent calendar (built 2026-11-23, branch `christmas`)
+
+- Theme `christmas` is the default. `XM.EVENT_TAG = 'xmas2026'` (js/christmas/xm.js): a saved theme only counts if its `themeTag` matches, so every player (device and account settings) is moved to Christmas once; after that their own choice sticks. Head script in index.html does the same before first paint. For the next event: new tag + new default.
+- Hub in Christmas mode = the calendar: 24 doors in a shuffled layout (`XM.LAYOUT`), 4×6 portrait / 8×3 landscape, decorated door styles, door 24 gold. `.hub-menu` is hidden in Christmas mode; chip shows "🎁 opened / 24".
+- Door rules: `XM.daysLeft(day)` uses the date in **Europe/Berlin** (`Intl.DateTimeFormat`), year `XM.YEAR = 2026`. A door opens when its day has come; the account **`niklas`** (`XM.MASTER`) can open every door any time; others get a floating "XY days left!". Already opened doors can be replayed any time.
+- Opening a door → card (`#xm-modal`): game icon, name, description, cat choice (Christmas costumes); opened doors also show their word. Beating the minigame saves `xmDoors[day] = timestamp` on the account (Firestore field **`xmDoors`**), returns to the calendar and animates the door open, revealing the word.
+- The words (`XM.WORDS`) come from Niklas's real calendar for his girlfriend – private, don't change them.
+- Music: `music/christmas_1..4.mp3` loop one after another (menu and games).
+- Runner `XM.create(api)` in xm.js (HUD `#xm-hud`, pause `#xm-pause`, snowfall, banners, confetti, `env.win()` / `env.fail()` → auto restart). Shared drawings in `XM.art` (gift, bauble, star, snowflake, tree + `insideTree`, snowman, hat, scarf, carrot, coal, candyCane, cookie, bell, stocking, mug, house, sack, icicle, toyMouse, `night()` and `room()` backgrounds). `env.walker(y)` = cat that follows the finger left/right.
+- 24 games in `js/christmas/games1-4.js` (`XM.games[day] = { icon, snow?, make(env) → { update, render, down, move?, up?, key? } }`): 1 Snowflake Catch, 2 Tree Lights, 3 Gift Tower, 4 Cookie Oven, 5 Snowball Fight, 6 Jingle Bells (melody), 7 Sled Ride, 8 Deck the Tree, 9 Build a Snowman, 10 Shooting Stars, 11 Hide & Seek (stockings), 12 Candy Cane Ninja, 13 Ice Skating, 14 Chimney Delivery, 15 Memory, 16 Odd Ornament, 17 Count the Presents, 18 Snow Shovel, 19 Bell Rhythm, 20 Icicle Dodge, 21 Hot Cocoa, 22 Star Connect, 23 Gift Sorting, 24 Christmas Eve. Texts: `xm.g<N>.name/desc/hint` in i18n.js.
+- Costume sprites `assets/cats/<cat>/christmas/` (2 walking frames each, real idle). Costumes load lazily per theme (`loadCostumes(kind)` in game.js).
+- Testing trick: `XM.daysLeft = () => 0; __game.xm.refresh()` opens all doors for any account; `__game.xm.debug.win()` beats the current game.
+- Girlfriend Mode doesn't apply to the calendar (nothing to lose); opening doors is always saved.
+
+## 15. Christmas special – original checklist (done, kept for the next event)
 
 Niklas said: "Next we are going to implement a christmas special." Expect a request similar to Halloween: new theme as default, new background/logo/music/costume sprites with `_christmas`, 3 new minigames, an exclusive currency, exclusive leaderboards, maybe a secret picture. Before building, ask/confirm what isn't specified (game ideas → propose 3 and wait for his pick, as with Halloween).
 
